@@ -13,9 +13,9 @@ import {
  */
 export function /* 5.1.1 */ EnsureRegistered(loader, key) {
     // Assert: loader has a [[Registry]]'] internal slot.
-    let pair = loader.['[[Registry]].find((entry) => key === entry.['[[key]]);
+    let pair = loader['[[Registry]]'].find((entry) => key === entry['[[key]]']);
     if (pair) {
-        let entry = pair.['[[value]]'];
+        let entry = pair['[[value]]'];
     } else {
         let entry = {
             [[Key]]: key,
@@ -29,7 +29,7 @@ export function /* 5.1.1 */ EnsureRegistered(loader, key) {
             [[Error]]: undefined
         };
     }
-    loader.['[[Registry]].push({ [[key]]: key, [[value]]: entry });
+    loader['[[Registry]]'].push({ [[key]]: key, [[value]]: entry });
     return entry;
 }
 
@@ -39,26 +39,26 @@ export function /* 5.1.2 */ Resolve(loader, name, referrer) {
 }
 
 export function /* 5.1.3 */ FulfillFetch(loader, entry, payload)
-    if (entry.['[[Fetch]]'] === undefined) {
-        entry.['[[Fetch]]'] = Promise.resolve(payload);
+    if (entry['[[Fetch]]'] === undefined) {
+        entry['[[Fetch]]'] = Promise.resolve(payload);
     } else {
-        resolvePromiseSlot(entry.['[[Fetch]]'], payload);
+        resolvePromiseSlot(entry['[[Fetch]]'], payload);
     }
     SetStateToMax(entry, "translate").
 }
 
 export function /* 5.1.4 */ FulfillTranslate(loader, entry, source)
-    if (entry.['[[Translate]]'] === undefined) {
-        entry.['[[Translate]]'] = Promise.resolve(source);
+    if (entry['[[Translate]]'] === undefined) {
+        entry['[[Translate]]'] = Promise.resolve(source);
     } else {
-        resolvePromiseSlot(entry.['[[Translate]]'], source);
+        resolvePromiseSlot(entry['[[Translate]]'], source);
     }
     SetStateToMax(entry, "instantiate").
 }
 
 export function /* 5.1.5 */ FulfillInstantiate(loader, entry, optionalInstance, source) {
-    if (entry.['[[Instantiate]]'] === undefined) {
-        entry.['[[Instantiate]]'] = new Promise(); // TODO: what is this doing? when is this resolved?
+    if (entry['[[Instantiate]]'] === undefined) {
+        entry['[[Instantiate]]'] = new Promise(); // TODO: what is this doing? when is this resolved?
     }
     return CommitInstantiated(loader, entry, optionalInstance, source).
 }
@@ -70,13 +70,13 @@ export function /* 5.1.6 */ CommitInstantiated(loader, entry, optionalInstance, 
     let deps = [];
     if (instance is a Module Record) {
         // Assert: instance is a Source Text Module Record.
-        instance.['[[RegistryEntry]]'] = entry;
-        instance.['[[RequestedModules]].forEach((dep) => {
+        instance['[[RegistryEntry]]'] = entry;
+        instance['[[RequestedModules]]'].forEach((dep) => {
             deps.push({ [[key]]: dep, [[value]]: undefined });
         });
     }
-    entry.['[[Dependencies]]'] = deps;
-    entry.['[[Module]]'] = instance;
+    entry['[[Dependencies]]'] = deps;
+    entry['[[Module]]'] = instance;
     SetStateToMax(entry, "link");
 }
 
@@ -87,6 +87,6 @@ export function /* 5.1.7 */ Instantiation(loader, result, source)
     if (IsCallable(result) === false)
         throw new TypeError();
     }
-    // result.['[[Realm]]'] = loader.['[[Realm]]'];
+    // result['[[Realm]]'] = loader['[[Realm]]'];
     return result;
 }

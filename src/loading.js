@@ -11,9 +11,6 @@ import {
 
 import {
     promiseCall,
-    createPromiseSlot,
-    resolvePromiseSlot,
-    rejectPromiseSlot,
 } from './utils.js';
 
 /**
@@ -22,13 +19,13 @@ import {
  */
 export function /* 5.2.1 */ RequestFetch(loader, key) {
     let entry = EnsureRegistered(loader, key);
-    let stateValue = GetStateValue(entry.[[State]]);
+    let stateValue = GetStateValue(entry['[[State]]']);
     let linkStateValue = GetStateValue("link");
     if (stateValue > linkStateValue) {
         return Promise.reject(new Error('Module entry state is greater than link.'));
     }
-    if (entry.[[Fetch]] !== undefined) {
-        return entry.[[Fetch]];
+    if (entry['[[Fetch]]'] !== undefined) {
+        return entry['[[Fetch]]'];
     }
     let hook = GetMethod(loader, @@fetch);
     // TODO: metadata object
@@ -37,19 +34,19 @@ export function /* 5.2.1 */ RequestFetch(loader, key) {
         SetStateToMax(entry, "translate");
         return payload;
     });
-    Set entry.[[Fetch]] to p;
+    Set entry['[[Fetch]]'] to p;
     return p.
 }
 
 export function /* 5.2.2 */ RequestTranslate(loader, key) {
     let entry = EnsureRegistered(loader, key);
-    let stateValue = GetStateValue(entry.[[State]]);
+    let stateValue = GetStateValue(entry['[[State]]']);
     let linkStateValue = GetStateValue("link");
     if (stateValue > linkStateValue) {
         return Promise.reject(new Error('Module entry state is greater than link.'));
     }
-    if (entry.[[Translate]] !== undefined) {
-        return entry.[[Translate]];
+    if (entry['[[Translate]]'] !== undefined) {
+        return entry['[[Translate]]'];
     }
     let hook = GetMethod(loader, @@translate);
     let p = RequestFetch(loader, key).then((payload) => {
@@ -60,23 +57,30 @@ export function /* 5.2.2 */ RequestTranslate(loader, key) {
             return source;
         });
     });
-    entry.[[Translate]] = p;
+    entry['[[Translate]]'] = p;
     return p;
 }
 
+            import {
+                promiseCall,
+                createPromiseSlot,
+                resolvePromiseSlot,
+                rejectPromiseSlot,
+            } from './utils.js';
+
             export function /* 5.2.2 */ RequestTranslate(loader, key) {
                 let entry = EnsureRegistered(loader, key);
-                let stateValue = GetStateValue(entry.[[State]]);
+                let stateValue = GetStateValue(entry['[[State]]']);
                 let linkStateValue = GetStateValue("link");
                 if (stateValue > linkStateValue) {
                     return Promise.reject(new Error('Module entry state is greater than link.'));
                 }
-                if (entry.[[Translate]] !== undefined) {
-                    return entry.[[Translate]];
+                if (entry['[[Translate]]'] !== undefined) {
+                    return entry['[[Translate]]'];
                 }
-                entry.[[Translate]] = ;
+                p = createPromiseSlot();
                 let hook = GetMethod(loader, @@translate);
-                let p = RequestFetch(loader, key).then((payload) => {
+                RequestFetch(loader, key).then((payload) => {
                     // TODO: metadata
                     let p1 = promiseCall(hook, key, payload);
                     return p1.then((source) => {
@@ -84,7 +88,7 @@ export function /* 5.2.2 */ RequestTranslate(loader, key) {
                         return source;
                     });
                 });
-                entry.[[Translate]] = p;
+                entry['[[Translate]]'] = p;
                 return p;
             }
 
@@ -95,11 +99,11 @@ export function /* 5.2.2 */ RequestTranslate(loader, key) {
 
 export function /* 5.2.3 */ RequestInstantiate(loader, key) {
     let entry = EnsureRegistered(loader, key);
-    if (entry.[[State]] === "ready"_ {
+    if (entry['[[State]]'] === "ready") {
         return Promise.reject(new Error('Module entry was already instantiated.'));
     }
-    if (entry.[[Instantiate]] != undefined) {
-        return entry.[[Instantiate]];
+    if (entry['[[Instantiate]]'] != undefined) {
+        return entry['[[Instantiate]]'];
     }
     let hook = GetMethod(loader, @@instantiate);
     let p = RequestTranslate(loader, key).then((source) => {
@@ -111,24 +115,24 @@ export function /* 5.2.3 */ RequestInstantiate(loader, key) {
             return entry;
         });
     });
-    entry.[[Instantiate]] = p;
+    entry['[[Instantiate]]'] = p;
     return p;
 }
 
 export function /* 5.2.4 */ RequestInstantiateAll(loader, key) {
     return RequestInstantiate(loader, key).then((entry) => {
         let depLoads = [];
-        entry.[[Dependencies]].forEach((pair) => {
-            let p = Resolve(loader, pair.[[key]], key).then((depKey) => {
+        entry['[[Dependencies]]'].forEach((pair) => {
+            let p = Resolve(loader, pair['[[key]]'], key).then((depKey) => {
                 let depEntry = EnsureRegistered(loader, depKey);
-                if (depEntry.[[State]] === "ready") {
-                    let dep = depEntry.[[Module]];
-                    pair.[[value]] = dep;
+                if (depEntry['[[State]]'] === "ready") {
+                    let dep = depEntry['[[Module]]'];
+                    pair['[[value]]'] = dep;
                     return dep;
                 }
                 return RequestInstantiateAll(loader, depKey).then((depEntry) => {
-                    let dep = depEntry.[[Module]];
-                    pair.[[value]] = dep;
+                    let dep = depEntry['[[Module]]'];
+                    pair['[[value]]'] = dep;
                     return dep;
                 });
             });
@@ -140,24 +144,38 @@ export function /* 5.2.4 */ RequestInstantiateAll(loader, key) {
 }
 
 export function /* 5.2.5 */ RequestLink(loader, key) {
+    // 1. Let entry be EnsureRegistered(loader, key).
     let entry = EnsureRegistered(loader, key);
-    if (entry.[[State]] === "ready") {
-        return Promise.resolve(entry.[[Module]]);
+    // 2. If entry.[[State]] is "ready", return a new promise fulfilled with entry.[[Module]].
+    if (entry['[[State]]'] === "ready") {
+        return Promise.resolve(entry['[[Module]]']);
     }
+    // 3. Return the result of transforming RequestInstantiateAll(loader, key) with a fulfillment handler that, when called with argument
+    // entry, runs the following steps:
     return RequestInstantiateAll(loader, key).then((entry) => {
-        // Assert: entry’s whole dependency graph is in "link" state.
+        // a. Assert: entry’s whole dependency graph is in "link" state.
+        howToDoThis();
+        // b. Let status be Link(loader, entry).
         let status = Link(loader, entry);
-        // ReturnIfAbrupt(status).
-        // Assert: entry’s whole dependency graph is in "ready" state.
+        // c. ReturnIfAbrupt(status).
+        ReturnIfAbrupt(status).
+        // d. Assert: entry’s whole dependency graph is in "ready" state.
+        howToDoThis();
+        // e. Return entry.
         return entry;
     });
 }
 
 export function /* 5.2.6 */ RequestReady(loader, key) {
+    // 1. Return the result of transforming RequestLink(loader, key) with a fulfillment handler that, when called with argument entry, runs the following steps:
     return RequestLink(loader, key).then((entry) => {
-        let mod = entry.[[Module]];
+        // a. Let module be entry.[[Module]].
+        let mod = entry['[[Module]]'];
+        // b. Let status be the result of calling the ModuleEvaluation abstract operation of module with no arguments.
         let status = ModuleEvaluation.call(mod);
-        // ReturnIfAbrupt(status);
+        // c. ReturnIfAbrupt(status).
+        ReturnIfAbrupt(status);
+        // d. Return module.
         return mod;
     });
 }

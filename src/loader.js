@@ -48,8 +48,8 @@ export default class Loader {
             }
             if (stage === "instantiate") {
                 return RequestInstantiateAll(loader, key).then((entry) => {
-                    if (typeof entry.['[[Module]]'] === 'function') {
-                        return entry.['[[Module]]'];
+                    if (typeof entry['[[Module]]'] === 'function') {
+                        return entry['[[Module]]'];
                     }
                     return undefined;
                 });
@@ -59,7 +59,7 @@ export default class Loader {
             }
             if (stage is "ready") {
                 return RequestReady(loader, key).then((entry) => {
-                    return GetModuleNamespace(entry.['[[Module]]);
+                    return GetModuleNamespace(entry['[[Module]]']);
                 });
             }
             throw new TypeError();
