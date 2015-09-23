@@ -3,6 +3,7 @@ import {
 } from './auxiliaries.js';
 
 import {
+    PassThroughPromise,
     GetStateValue,
     SetStateToMax,
     GetMethod,
@@ -37,16 +38,18 @@ export function /* 5.2.1 */ RequestFetch(loader, key) {
     // 7. // TODO: metadata object
     // 8. Let p0 be the result of promise-calling hook(key).
     let p0 = promiseCall(hook, key);
-    // 9. Let p be the result of transforming p0 with a fulfillment handler that, when called with argument payload, runs the following steps:
-    let p = p0.then((payload) => {
+    // 9. Let p1 be the result of transforming p0 with a new pass-through promise.
+    let p1 = PassThroughPromise(p0);
+    // 10. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument payload, runs the following steps:
+    let p2 = p1.then((payload) => {
         // a. SetStateToMax(entry, "translate").
         SetStateToMax(entry, "translate");
         // b. Return payload.
         return payload;
     });
-    // 10. Set entry.[[Fetch]] to p.
-    Set entry['[[Fetch]]'] to p;
-    // 11. Return p.
+    // 11. Set entry.[[Fetch]] to p1.
+    entry['[[Fetch]]'] = p1;
+    // 12. Return p1.
     return p.
 }
 
@@ -71,15 +74,19 @@ export function /* 5.2.2 */ RequestTranslate(loader, key) {
     // runs the following steps:
     let p = RequestFetch(loader, key).then((payload) => {
         // a. // TODO: metadata
-        // b. Let p1 be the result of promise-calling hook(key, payload).
-        let p1 = promiseCall(hook, key, payload);
-        // c. Return the result of transforming p1 with a fulfillment handler that, when called with argument source, runs the following steps:
-        return p1.then((source) => {
+        // b. Let p0 be the result of promise-calling hook(key, payload).
+        let p0 = promiseCall(hook, key, payload);
+        // c. Let p1 be the result of transforming p0 with a new pass-through promise.
+        let p1 = PassThroughPromise(p0);
+        // d. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument source, runs the following steps:
+        let p2 = p1.then((source) => {
             // i. SetStateToMax(entry, "instantiate").
             SetStateToMax(entry, "instantiate").
             // ii. Return source.
             return source;
         });
+        // e. Return p1.
+        return p1;
     });
     // 8. Set entry.[[Translate]] to p.
     entry['[[Translate]]'] = p;
@@ -200,7 +207,7 @@ export function /* 5.2.4 */ RequestInstantiateAll(loader, key) {
 export function /* 5.2.5 */ RequestLink(loader, key) {
     // 1. Let entry be EnsureRegistered(loader, key).
     let entry = EnsureRegistered(loader, key);
-    // 2. If entry.[[State]] is "ready", return a new promise fulfilled with entry.[[Module]].
+    // 2. If entry.[[State]] is "ready", return a promise resolved with entry.[[Module]].
     if (entry['[[State]]'] === "ready") {
         return Promise.resolve(entry['[[Module]]']);
     }

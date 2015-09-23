@@ -7,10 +7,6 @@ import {
     SetStateToMax,
 } from './abstracts.js';
 
-/**
- * The GetStateValue abstract operation returns a Number value representing the
- * state.
- */
 export function /* 5.1.1 */ EnsureRegistered(loader, key) {
     // 1. Assert: loader has a [[Registry]] internal slot.
     HowToDoThis();
@@ -36,7 +32,10 @@ export function /* 5.1.1 */ EnsureRegistered(loader, key) {
             '[[Error]]': undefined,
         };
         // b. Append { [[key]]: key, [[value]]: entry } to loader.[[Registry]].
-        loader['[[Registry]]'].push({ [[key]]: key, [[value]]: entry });
+        loader['[[Registry]]'].push({
+            '[[key]]': key,
+            '[[value]]': entry
+        });
     }
     // 5. Return entry.
     return entry;
@@ -49,22 +48,30 @@ export function /* 5.1.2 */ Resolve(loader, name, referrer) {
     return hook(name, referrer);
 }
 
-export function /* 5.1.3 */ FulfillFetch(loader, entry, payload)
+export function /* 5.1.3 */ FulfillFetch(loader, entry, payload) {
+    // 1. If entry.[[Fetch]] is undefined, then set entry.[[Fetch]] to a promise resolved with payload.
     if (entry['[[Fetch]]'] === undefined) {
         entry['[[Fetch]]'] = Promise.resolve(payload);
-    } else {
+    }
+    // 2. Else fulfill entry.[[Fetch]] with payload.
+    else {
         resolvePromiseSlot(entry['[[Fetch]]'], payload);
     }
-    SetStateToMax(entry, "translate").
+    // 3. SetStateToMax(entry, "translate").
+    SetStateToMax(entry, "translate");
 }
 
-export function /* 5.1.4 */ FulfillTranslate(loader, entry, source)
+export function /* 5.1.4 */ FulfillTranslate(loader, entry, source) {
+    // 1. If entry.[[Translate]] is undefined, then set entry.[[Translate]] to a promise resolved with source.
     if (entry['[[Translate]]'] === undefined) {
         entry['[[Translate]]'] = Promise.resolve(source);
-    } else {
+    }
+    // 2. Else fulfill entry.[[Translate]] with source.
+    else {
         resolvePromiseSlot(entry['[[Translate]]'], source);
     }
-    SetStateToMax(entry, "instantiate").
+    // 3. SetStateToMax(entry, "instantiate").
+    SetStateToMax(entry, "instantiate");
 }
 
 export function /* 5.1.5 */ FulfillInstantiate(loader, entry, optionalInstance, source) {
@@ -73,10 +80,10 @@ export function /* 5.1.5 */ FulfillInstantiate(loader, entry, optionalInstance, 
         entry['[[Instantiate]]'] = new Promise();
     }
     // 2. Return CommitInstantiated(loader, entry, optionalInstance, source).
-    return CommitInstantiated(loader, entry, optionalInstance, source).
+    return CommitInstantiated(loader, entry, optionalInstance, source);
 }
 
-export function /* 5.1.6 */ CommitInstantiated(loader, entry, optionalInstance, source)
+export function /* 5.1.6 */ CommitInstantiated(loader, entry, optionalInstance, source) {
     // 1. Let instance be Instantiation(loader, optionalInstance, source).
     let instance = Instantiation(loader, optionalInstance, source);
     // 2. ReturnIfAbrupt(instance).
@@ -107,7 +114,7 @@ export function /* 5.1.6 */ CommitInstantiated(loader, entry, optionalInstance, 
     SetStateToMax(entry, "link");
 }
 
-export function /* 5.1.7 */ Instantiation(loader, result, source)
+export function /* 5.1.7 */ Instantiation(loader, result, source) {
     // 1. If result is undefined, then return ParseModule(source).
     if (result === undefined) {
         return ParseModule(source);

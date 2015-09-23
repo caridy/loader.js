@@ -7,6 +7,9 @@ import {
     RequestLink,
     RequestInstantiateAll,
 } from "./auxiliaries.js";
+import {
+    PassThroughPromise
+} from "./abstracts.js";
 
 export default class Loader {
     constructor () /* 3.1.1 */ {
@@ -60,13 +63,13 @@ export default class Loader {
         return Resolve(loader, name, referrer).then((key) => {
             // a. If stage is "fetch", then:
             if (stage === "fetch") {
-                // i. Return RequestFetch(loader, key).
-                return RequestFetch(loader, key);
+                // i. Return the result of transforming RequestFetch(loader, key) with a new pass-through promise.
+                return PassThroughPromise(RequestFetch(loader, key));
             }
             // b. If stage is "translate", then:
             if (stage === "translate") {
-                // i. Return RequestTranslate(loader, key).
-                return RequestTranslate(loader, key);
+                // i. Return the result of transforming RequestTranslate(loader, key) with a new pass-through promise.
+                return PassThroughPromise(RequestTranslate(loader, key));
             }
             // c. If stage is "instantiate", then:
             if (stage === "instantiate") {

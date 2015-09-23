@@ -31,6 +31,15 @@ export function /*2.5.4*/ SetStateToMax(entry, newState) {
     if (newStateValue > stateValue) entry['[[State]]'] = newState;
 }
 
+/**
+ * Transforming p with a new pass-through promise is a shorthand for wrapping the
+ * promise to avoid exposing the original promise.
+ */
+export function /* 2.3.1 */ PassThroughPromise(p) {
+    // 1. Transforming p with a fulfillment handler that, when called with argument value, returns value.
+    return p.then((value) => value);
+}
+
 export function GetMethod() {
 
 }
