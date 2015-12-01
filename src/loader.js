@@ -1,115 +1,99 @@
-import Registry from "./registry.js";
 import {
     Resolve,
-    RequestReady,
-    RequestFetch,
-    RequestTranslate,
-    RequestLink,
-    RequestInstantiateAll,
-} from "./auxiliaries.js";
-import {
-    PassThroughPromise
+    CreateRegistry,
+    IsValidStageValue,
+    EnsureRegistered,
 } from "./abstracts.js";
 
-export default class Loader {
-    constructor () /* 3.1.1 */ {
-        // 1. If NewTarget is undefined, then throw a TypeError exception.
-        HowToDoThis();
-        // 2. Let O be OrdinaryCreateFromConstructor(NewTarget, "Reflect.Loader.prototype").
-        let O be Object.create(null);
-        // 3. ReturnIfAbrupt(O).
-        HowToDoThis();
-        // 4. Let registry to a new Registry(O).
-        let registry = new Registry(O);
-        // 5. Set O’s [[Registry]] internal slot to registry.
-        O['[[Registry]]'] = registry;
-        // 6. Return O.
-        return O;
+// 3.1.1. LoaderConstructor()
+function LoaderConstructor() {
+    // 1. If NewTarget is undefined, then throw a TypeError exception.
+    HowToDoThis();
+    // 2. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%LoaderPrototype%", «[[Realm]], [[Registry]]»).
+    let O = OrdinaryCreateFromConstructor(ModuleStatus, "%ModuleStatusPrototype%", ['[[Realm]]', '[[Registry]]']);
+    // 3. Set O’s [[Registry]] internal slot to CreateRegistry().
+    O['[[Registry]]'] = CreateRegistry();
+    // 4. Return O.
+    return O;
+}
+
+export default class Loader{
+
+    // 3.3.1. Loader.prototype.constructor
+    constructor() {
+        return LoaderConstructor();
     }
 
-    'import': (name, referrer) /* 3.3.2 */ {
+    // 3.3.2. Loader.prototype.import(name[, referrer])
+    ['import'](name, referrer) {
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
         HowToDoThis();
-        // 3. If loader does not have a [[Registry]] internal slot throw a TypeError exception.
+        // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         HowToDoThis();
-        // 4. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key,
-        // runs the following steps:
+        // 4. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key, runs the following steps:
         return Resolve(loader, name, referrer).then((key) => {
-            // a. Return RequestReady(loader, key).
-            return RequestReady(loader, key);
+            // a. Let entry be EnsureRegistered(loader, key).
+            let entry = EnsureRegistered(loader, key);
+            // b. Return LoadModule(entry, "ready").
+            return LoadModule(entry, "ready");
         });
     }
 
-    resolve(name, referrer) /* 3.3.3 */ {
+    // 3.3.3. Loader.prototype.resolve(name[, referrer])
+    resolve(name, referrer) {
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
         HowToDoThis();
-        // 3. Return Resolve(loader, name, referrer).
+        // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
+        HowToDoThis();
+        // 4. Return Resolve(loader, name, referrer).
         return Resolve(loader, name, referrer);
     }
 
-    load(name, referrer, stage = 'ready') /* 3.3.4 */ {
+    // 3.3.4. Loader.prototype.load(name[, referrer[, stage]])
+    load(name, referrer, stage) {
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
         HowToDoThis();
-        // 3. If stage is undefined then let stage be "ready".
+        // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         HowToDoThis();
-        // 4. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key,
-        // runs the following steps:
+        try {
+            // 4. If stage is undefined then let stage be "ready".
+            if (stage === undefined) stage = "ready";
+            // 5. Else let stageValue be ToString(stage).
+            else stage = stage.toString();
+        } catch (e) {
+            // 6. RejectIfAbrupt(stageValue).
+            Promise.reject(e);
+        }
+        // 7. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
+        if (IsValidStageValue(stageValue) === false) return Promise.reject(new RangeError('Invalid stage value'));
+        // 8. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key, runs the following steps:
         return Resolve(loader, name, referrer).then((key) => {
-            // a. If stage is "fetch", then:
-            if (stage === "fetch") {
-                // i. Return the result of transforming RequestFetch(loader, key) with a new pass-through promise.
-                return PassThroughPromise(RequestFetch(loader, key));
-            }
-            // b. If stage is "translate", then:
-            if (stage === "translate") {
-                // i. Return the result of transforming RequestTranslate(loader, key) with a new pass-through promise.
-                return PassThroughPromise(RequestTranslate(loader, key));
-            }
-            // c. If stage is "instantiate", then:
-            if (stage === "instantiate") {
-                // i. Return the result of transforming RequestInstantiateAll(loader, key) with a fulfillment handler that, when called with argument entry, runs the following steps:
-                return RequestInstantiateAll(loader, key).then((entry) => {
-                    // 1. If entry.[[Module]] is a Function object, return entry.[[Module]].
-                    if (typeof entry['[[Module]]'] === 'function') {
-                        return entry['[[Module]]'];
-                    }
-                    // 2. Return undefined.
-                    return undefined;
-                });
-            }
-            // d. If stage is "link", then:
-            if (stage is "link") {
-                // i. Return the result of transforming RequestLink(loader, key) with a fulfillment handler that returns undefined.
-                return RequestLink(loader, key).then(() => undefined);
-            }
-            // e. If stage is "ready", then:
-            if (stage is "ready") {
-                // i. Return the result of transforming RequestReady(loader, key) with a fulfillment handler that, when called with argument entry, runs the following steps:
-                return RequestReady(loader, key).then((entry) => {
-                    // 1. Return GetModuleNamespace(entry.[[Module]]).
-                    return GetModuleNamespace(entry['[[Module]]']);
-                });
-            }
-            // f. Throw a new TypeError.
-            throw new TypeError();
+            // a. Let entry be EnsureRegistered(loader, key).
+            let entry = EnsureRegistered(loader, key);
+            // b. Return LoadModule(entry, stageValue).
+            return LoadModule(entry, stageValue);
         });
     }
 
-    get registry() /* 3.3.5 */ {
-        // 1. Let loader be this value.
+    // 3.3.5. get Loader.prototype.registry
+    get registry() {
         let loader = this;
+        // 2. If Type(loader) is not Object, throw a TypeError exception.
+        HowToDoThis();
+        // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
+        HowToDoThis();
         // 2. Return loader.[[Registry]].
-        return loader.__Registry;
+        return loader['[[Registry]]'];
     }
 
-
-    [ Symbol.toStringTag ]() /* 3.3.6 */ {
+    // 3.3.6. Loader.prototype [ @@toStringTag ]
+    [ Symbol.toStringTag ]() {
         return "Object";
     }
 

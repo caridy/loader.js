@@ -1,0 +1,11 @@
+{
+    "ecmaFeatures": {
+        "arrowFunctions": true,
+        "blockBindings": true,
+        "defaultParams": true,
+        "restParams": true,
+        "modules": true,
+        "classes": true,
+    },
+    "rules": {}
+}
