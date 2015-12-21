@@ -15,13 +15,13 @@ function ModuleStatusConstructor(loader, key, module) {
     // 2. If Type(loader) is not Object, throw a TypeError exception.
     if (typeof loader !== "object") throw new TypeError();
     // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
-    if (!Object.getOwnPropertyDescriptor(loader, '[[Registry]]') throw new TypeError();
+    if (!Object.getOwnPropertyDescriptor(loader, '[[Registry]]')) throw new TypeError();
     // 4. Let keyString be ? ToString(key).
     let keyString = ToString(key);
     // 5. If Type(module) is not Object, throw a TypeError exception.
     if (typeof module !== "object") throw new TypeError();
     // 6. If module does not have all of the internal slots of a Module Instance (8.5), throw a TypeError exception.
-    if (!Object.getOwnPropertyDescriptor(module, '[[Namespace]]') throw new TypeError();
+    if (!Object.getOwnPropertyDescriptor(module, '[[Namespace]]')) throw new TypeError();
     // 7. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%ModuleStatusPrototype%", «[[Loader]], [[Pipeline]], [[Key]], [[Module]], [[Metadata]], [[Dependencies]], [[Error]]» ).
     let O = OrdinaryCreateFromConstructor(ModuleStatus, "%ModuleStatusPrototype%", ['[[Loader]]', '[[Pipeline]]', '[[Key]]', '[[Module]]', '[[Metadata]]', '[[Dependencies]]', '[[Error]]']);
     // 8. Let pipeline be a new List.
@@ -80,7 +80,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Let stageEntry be GetCurrentStage(entry).
         let stageEntry = GetCurrentStage(entry);
         // 5. Return stageEntry.[[Stage]].
@@ -94,7 +94,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Return entry.[[Module]].
         return entry['[[Module]]'];
     }
@@ -106,7 +106,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Return entry.[[Error]].
         return entry['[[Error]]'];
     }
@@ -118,7 +118,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Let array be ArrayCreate(0).
         let array = [];
         // 5. Let n be 0.
@@ -155,14 +155,15 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
 
+        let stageValue;
         try {
 
             // 4. If stage is undefined then let stageValue be "fetch".
-            if (!stage) let stageValue = 'fetch';
+            if (!stage) stageValue = 'fetch';
             // 5. Else let stageValue be ToString(stage).
-            else let stageValue = ToString(stage);
+            else stageValue = ToString(stage);
 
         } catch (stageValue) {
 
@@ -184,7 +185,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
 
         try {
 
@@ -228,7 +229,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
 
         try {
 
@@ -277,7 +278,7 @@ export default class ModuleStatus {
         // 2. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
 
         try {
 

@@ -6,6 +6,7 @@
         "restParams": true,
         "modules": true,
         "classes": true,
+        "forOf": true
     },
     "rules": {}
 }

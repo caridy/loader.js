@@ -14,183 +14,133 @@ import {
     promiseCall,
 } from './utils.js';
 
-/**
- * The GetStateValue abstract operation returns a Number value representing the
- * state.
- */
-export function /* 5.2.1 */ RequestFetch(loader, key) {
-    // 1. Let entry be EnsureRegistered(loader, key).
-    let entry = EnsureRegistered(loader, key);
-    // 2. Let stateValue be GetStateValue(entry.[[State]]).
-    let stateValue = GetStateValue(entry['[[State]]']);
-    // 3. Let linkStateValue be GetStateValue("link").
-    let linkStateValue = GetStateValue("link");
-    // 4. If stateValue is greater than linkStateValue, return a new error promise.
-    if (stateValue > linkStateValue) {
-        return Promise.reject(new Error('Module entry state is greater than link.'));
-    }
-    // 5. If entry.[[Fetch]] is not undefined, return entry.[[Fetch]].
-    if (entry['[[Fetch]]'] !== undefined) {
-        return entry['[[Fetch]]'];
-    }
-    // 6. Let hook be GetMethod(loader, @@fetch).
-    let hook = GetMethod(loader, @@fetch);
-    // 7. // TODO: metadata object
-    // 8. Let p0 be the result of promise-calling hook(key).
-    let p0 = promiseCall(hook, key);
-    // 9. Let p1 be the result of transforming p0 with a new pass-through promise.
+// 6.2.1. RequestFetch(entry)
+export function RequestFetch(entry) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let fetchStageEntry be GetStage(entry, "fetch").
+    let fetchStageEntry = GetStage(entry, "fetch");
+    // 3. If fetchStageEntry is undefined, return a promise resolved with undefined.
+    if (fetchStageEntry === undefined) return Promise.resolve();
+    // 4. If fetchStageEntry.[[Result]] is not undefined, return fetchStageEntry.[[Result]].
+    if (fetchStageEntry['[[Result]]'] !== undefined) return fetchStageEntry['[[Result]]'];
+    // 5. Let hook be GetMethod(entry.[[Loader]], @@fetch).
+    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.fetch);
+    // 6. Let p0 be the result of promise-calling hook(entry, entry.[[Key]]).
+    let p0 = promiseCall(hook, entry, entry['[[Key]]']);
+    // 7. Let p1 be the result of transforming p0 with a new pass-through promise.
     let p1 = PassThroughPromise(p0);
-    // 10. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument payload, runs the following steps:
+    // 8 Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument payload, runs the following steps:
     let p2 = p1.then((payload) => {
-        // a. SetStateToMax(entry, "translate").
-        SetStateToMax(entry, "translate");
-        // b. Return payload.
-        return payload;
+        // a. UpgradeToStage(entry, "translate").
+        UpgradeToStage(entry, "translate");
     });
-    // 11. Set entry.[[Fetch]] to p1.
-    entry['[[Fetch]]'] = p1;
-    // 12. Return p1.
-    return p.
+    // 9. Set translateStageEntry.[[Result]] to p.
+    translateStageEntry['[[Result]]'] = p;
+    // 10. Return p1.
+    return p;
 }
 
-export function /* 5.2.2 */ RequestTranslate(loader, key) {
-    // 1. Let entry be EnsureRegistered(loader, key).
-    let entry = EnsureRegistered(loader, key);
-    // 2. Let stateValue be GetStateValue(entry.[[State]]).
-    let stateValue = GetStateValue(entry['[[State]]']);
-    // 3. Let linkStateValue be GetStateValue("link").
-    let linkStateValue = GetStateValue("link");
-    // 4. If stateValue is greater than linkStateValue, return a new error promise.
-    if (stateValue > linkStateValue) {
-        return Promise.reject(new Error('Module entry state is greater than link.'));
-    }
-    // 5. If entry.[[Translate]] is not undefined, return entry.[[Translate]].
-    if (entry['[[Translate]]'] !== undefined) {
-        return entry['[[Translate]]'];
-    }
-    // 6. Let hook be GetMethod(loader, @@translate).
-    let hook = GetMethod(loader, @@translate);
-    // 7. Let p be the result of transforming RequestFetch(loader, key) with a fulfillment handler that, when called with argument payload,
-    // runs the following steps:
-    let p = RequestFetch(loader, key).then((payload) => {
-        // a. // TODO: metadata
-        // b. Let p0 be the result of promise-calling hook(key, payload).
-        let p0 = promiseCall(hook, key, payload);
-        // c. Let p1 be the result of transforming p0 with a new pass-through promise.
+// 6.2.2. RequestTranslate(entry)
+export function RequestTranslate(entry) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    // 2. Let translateStageEntry be GetStage(entry, "translate").
+    let translateStageEntry = GetStage(entry, "translate");
+    // 3. If translateStageEntry is undefined, return a promise resolved with undefined.
+    if (translateStageEntry === undefined) return Promise.resolve();
+    // 4. If translateStageEntry.[[Result]] is not undefined, return translateStageEntry.[[Result]].
+    if (translateStageEntry['[[Result]]'] !== undefined) return translateStageEntry['[[Result]]'];
+    // 5. Let hook be GetMethod(entry.[[Loader]], @@translate).
+    let hook = entry['[[Loader]]'][Reflect.Loader.translate];
+    // 6. Let p be the result of transforming RequestFetch(entry) with a fulfillment handler that, when called with argument payload, runs the following steps:
+    let p = RequestFetch(entry).then((payload) => {
+        // a. Let p0 be the result of promise-calling hook(entry, payload).
+        let p0 = promiseCall(hook, entry, payload);
+        // b. Let p1 be the result of transforming p0 with a new pass-through promise.
         let p1 = PassThroughPromise(p0);
-        // d. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument source, runs the following steps:
+        // c. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument source, runs the following steps:
         let p2 = p1.then((source) => {
-            // i. SetStateToMax(entry, "instantiate").
-            SetStateToMax(entry, "instantiate").
-            // ii. Return source.
-            return source;
+            // i. UpgradeToStage(entry, "instantiate").
+            UpgradeToStage(entry, "instantiate");
         });
-        // e. Return p1.
+        // d. Return p1.
         return p1;
     });
-    // 8. Set entry.[[Translate]] to p.
-    entry['[[Translate]]'] = p;
-    // 9. Return p.
+    // 7. Set translateStageEntry.[[Result]] to p..
+    translateStageEntry['[[Result]]'] = p;
+    // 8. Return p.
     return p;
 }
 
-            // Interin Code...
-            // import {
-            //     promiseCall,
-            //     createPromiseSlot,
-            //     resolvePromiseSlot,
-            //     rejectPromiseSlot,
-            // } from './utils.js';
-            //
-            // export function /* 5.2.2 */ RequestTranslate(loader, key) {
-            //     let entry = EnsureRegistered(loader, key);
-            //     let stateValue = GetStateValue(entry['[[State]]']);
-            //     let linkStateValue = GetStateValue("link");
-            //     if (stateValue > linkStateValue) {
-            //         return Promise.reject(new Error('Module entry state is greater than link.'));
-            //     }
-            //     if (entry['[[Translate]]'] !== undefined) {
-            //         return entry['[[Translate]]'];
-            //     }
-            //     p = createPromiseSlot();
-            //     let hook = GetMethod(loader, @@translate);
-            //     RequestFetch(loader, key).then((payload) => {
-            //         // TODO: metadata
-            //         let p1 = promiseCall(hook, key, payload);
-            //         return p1.then((source) => {
-            //             SetStateToMax(entry, "instantiate").
-            //             return source;
-            //         });
-            //     });
-            //     entry['[[Translate]]'] = p;
-            //     return p;
-            // }
-
-
-export function /* 5.2.3 */ RequestInstantiate(loader, key) {
-    // 1. Let entry be EnsureRegistered(loader, key).
-    let entry = EnsureRegistered(loader, key);
-    // 2. If entry.[[State]] is "ready", return a new error promise.
-    if (entry['[[State]]'] === "ready") {
-        return Promise.reject(new Error('Module entry was already instantiated.'));
-    }
-    // 3. If entry.[[Instantiate]] is not undefined, return entry.[[Instantiate]].
-    if (entry['[[Instantiate]]'] != undefined) {
-        return entry['[[Instantiate]]'];
-    }
-    // 4. Let hook be GetMethod(loader, @@instantiate).
-    let hook = GetMethod(loader, @@instantiate);
-    // 5. Let p be the result of transforming RequestTranslate(loader, key) with a fulfillment handler that, when called with argument source,
-    // runs the following steps:
-    let p = RequestTranslate(loader, key).then((source) => {
-        // a. // TODO: metadata
-        // b. Let p1 be the result of promise-calling hook(key, source).
-        let p1 = promiseCalling(hook, key, source);
-        // c. Return the result of transforming p1 with a fulfillment handler that, when called with argument optionalInstance, runs the
-        // following steps:
-        return p1.then((optionalInstance) => {
-            // i. Let status be CommitInstantiated(loader, entry, optionalInstance, source).
-            let status = CommitInstantiated(loader, entry, optionalInstance, source);
-            // ii. ReturnIfAbrupt(status).
-            HowToDoThis();
-            // iii. Return entry.
-            return entry;
+// 6.2.3. RequestInstantiate(entry)
+export function RequestInstantiate(entry) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let instantiateStageEntry be GetStage(entry, "instantiate").
+    let instantiateStageEntry = GetStage(entry, "instantiate");
+    // 3. If instantiateStageEntry is undefined, return a promise resolved with undefined.
+    if (instantiateStageEntry === undefined) return Promise.resolve();
+    // 4. If instantiateStageEntry.[[Result]] is not undefined, return instantiateStageEntry.[[Result]].
+    if (instantiateStageEntry['[[Result]]'] !== undefined) return instantiateStageEntry['[[Result]]'];
+    // 5. Let hook be GetMethod(entry.[[Loader]], @@instantiate).
+    let hook = entry['[[Loader]]'][Reflect.Loader.instantiate];
+    // 6. Let p be the result of transforming RequestTranslate(entry) with a fulfillment handler that, when called with argument source, runs the following steps:
+    let p = RequestTranslate(entry).then((source) => {
+        // a. Let p0 be the result of promise-calling hook(entry, source).
+        let p0 = promiseCalling(hook, entry, source);
+        // b. Let p1 be the result of transforming p0 with a new pass-through promise.
+        let p1 = PassThroughPromise(p0);
+        // c. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument optionalInstance, runs the following steps:
+        let p2 = p1.then((optionalInstance) => {
+            // i. Let status be ? ExtractDependencies(entry, optionalInstance, source).
+            ExtractDependencies(entry, optionalInstance, source);
+            // ii. UpgradeToStage(entry, "satisfy").
+            UpgradeToStage(entry, "satisfy");
         });
+        // d. Return p1.
+        return p1;
     });
-    // 6. Set entry.[[Instantiate]] to p.
-    entry['[[Instantiate]]'] = p;
-    // 7. Return p.
+    // 7. Set instantiateStageEntry.[[Result]] to p.
+    instantiateStageEntry['[[Result]]'] = p;
+    // 8. Return p.
     return p;
 }
 
-export function /* 5.2.4 */ RequestInstantiateAll(loader, key) {
-    // 1. Return the result of transforming RequestInstantiate(loader, key) with a fulfillment handler that, when called with argument entry, runs the following steps:
-    return RequestInstantiate(loader, key).then((entry) => {
+// 6.2.4. RequestSatisfy(entry)
+export function RequestSatisfy(entry) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let satisfyStageEntry be GetStage(entry.[[Loader]], "satisfy").
+    let satisfyStageEntry = GetStage(entry['[[Loader]]'], "satisfy");
+    // 3. If satisfyStageEntry is undefined, return a promise resolved with undefined.
+    if (satisfyStageEntry === undefined) return Promise.resolve();
+    // 4. If satisfyStageEntry.[[Result]] is not undefined, return satisfyStageEntry.[[Result]].
+    if (satisfyStageEntry['[[Result]]'] !== undefined) return satisfyStageEntry['[[Result]]'];
+    // 5. Let p be the result of transforming RequestInstantiate(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
+    let p = RequestInstantiate(entry).then((entry) => {
         // a. Let depLoads be a new empty List.
         let depLoads = [];
         // b. For each pair in entry.[[Dependencies]], do:
         entry['[[Dependencies]]'].forEach((pair) => {
-            // i. Let p be the result of transforming Resolve(loader, pair.[[key]], key) with a fulfillment handler that, when called with value depKey, runs the following steps:
-            let p = Resolve(loader, pair['[[key]]'], key).then((depKey) => {
-                // 1. Let depEntry be EnsureRegistered(loader, depKey).
-                let depEntry = EnsureRegistered(loader, depKey);
-                // 2. If depEntry.[[State]] is "ready", then:
-                if (depEntry['[[State]]'] === "ready") {
-                    // a. Let dep be depEntry.[[Module]].
-                    let dep = depEntry['[[Module]]'];
-                    // b. Set pair.[[value]] to dep.
-                    pair['[[value]]'] = dep;
-                    // c. Return dep.
-                    return dep;
+            // i. Let p be the result of transforming Resolve(loader, pair.[[Key]], key) with a fulfillment handler that, when called with value depKey, runs the following steps:
+            let p = Resolve(loader, pair['[[Key]]'], key).then((depKey) => {
+                // 1. Let depEntry be EnsureRegistered(entry.[[Loader]], depKey).
+                let depEntry = EnsureRegistered(entry['[[Loader]]'], depKey);
+                // 2. Let pair.[[Key]] to depKey.
+                pair['[[Key]]'] = depKey;
+                // 3. Let pair.[[ModuleStatus]] to depEntry.
+                pair['[[ModuleStatus]]'] = depEntry;
+                // 4. Let currentStageEntry be GetCurrentStage(entry).
+                let currentStageEntry = GetCurrentStage(entry);
+                // 5. If currentStageEntry.[[Stage]] is "ready", then:
+                if (currentStageEntry['[[Stage]]'] === "ready") {
+                    // a. Return depEntry.[[Module]].
+                    return depEntry['[[Module]]'];
                 }
-                // 3. Return the result of transforming RequestInstantiateAll(loader, depKey) with a fulfillment handler that, when called with value depEntry, runs the following steps:
-                return RequestInstantiateAll(loader, depKey).then((depEntry) => {
-                    // a. Let dep be depEntry.[[Module]].
-                    let dep = depEntry['[[Module]]'];
-                    // b. Set pair.[[value]] to dep.
-                    pair['[[value]]'] = dep;
-                    // c. Return dep.
-                    return dep;
+                // 6. Return the result of transforming RequestSatisfy(depEntry) with a fulfillment handler that, when called with value depEntry, runs the following steps:
+                return RequestSatisfy(depEntry).then((depEntry) => {
+                    // a. Return depEntry.[[Module]].
+                    return depEntry['[[Module]]'];
                 });
             });
             // ii. Append p to depLoads.
@@ -199,44 +149,59 @@ export function /* 5.2.4 */ RequestInstantiateAll(loader, key) {
         // c. Let p be the result of waiting for all depLoads.
         let p = Promise.all(depLoads);
         // d. Return the result of transforming p with a fulfillment handler that, when called, runs the following steps:
-            // i. Return entry.
-        return p.then(() => entry);
+        return p.then(() => {
+            // i. UpgradeToStage(entry, "link").
+            UpgradeToStage(entry, "link");
+            // ii. Return entry.
+            return entry;
+        });
     });
+    // 6. Set satisfyStageEntry.[[Result]] to p.
+    satisfyStageEntry['[[Result]]'] = p;
+    // 7. Return p.
+    return p;
 }
 
-export function /* 5.2.5 */ RequestLink(loader, key) {
-    // 1. Let entry be EnsureRegistered(loader, key).
-    let entry = EnsureRegistered(loader, key);
-    // 2. If entry.[[State]] is "ready", return a promise resolved with entry.[[Module]].
-    if (entry['[[State]]'] === "ready") {
-        return Promise.resolve(entry['[[Module]]']);
-    }
-    // 3. Return the result of transforming RequestInstantiateAll(loader, key) with a fulfillment handler that, when called with argument
-    // entry, runs the following steps:
-    return RequestInstantiateAll(loader, key).then((entry) => {
-        // a. Assert: entry’s whole dependency graph is in "link" state.
-        howToDoThis();
-        // b. Let status be Link(loader, entry).
-        let status = Link(loader, entry);
-        // c. ReturnIfAbrupt(status).
-        ReturnIfAbrupt(status).
-        // d. Assert: entry’s whole dependency graph is in "ready" state.
-        howToDoThis();
-        // e. Return entry.
+// 6.2.5. RequestLink(entry)
+export function RequestLink(entry) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let linkStageEntry be GetStage(entry, "link").
+    let linkStageEntry = GetStage(entry, "link");
+    // 3. If linkStageEntry is undefined, return a promise resolved with undefined.
+    if (linkStageEntry === undefined) return Promise.resolve();
+    // 4. If linkStageEntry.[[Result]] is not undefined, return linkStageEntry.[[Result]].
+    if (linkStageEntry['[[Result]]'] !== undefined) return linkStageEntry['[[Result]]'];
+    // 5. Return the result of transforming RequestSatisfy(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
+    return RequestSatisfy(entry).then((entry) => {
+        // a. Assert: entry’s whole dependency graph is in "link" or "ready" stage.
+        HowToDoThis();
+        // b. Let status be ? Link(entry).
+        let status = Link(entry);
+        // c. Assert: entry’s whole dependency graph is in "ready" stage.
+        HowToDoThis();
+        // d. Return entry.
         return entry;
     });
+    // BUG: spec missing storing the link promise
 }
 
-export function /* 5.2.6 */ RequestReady(loader, key) {
-    // 1. Return the result of transforming RequestLink(loader, key) with a fulfillment handler that, when called with argument entry, runs the following steps:
-    return RequestLink(loader, key).then((entry) => {
+// 6.2.6. RequestReady(entry)
+export function RequestReady(ready) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let currentStageEntry be GetCurrentStage(entry).
+    let currentStageEntry = GetCurrentStage(entry);
+    // 3. If currentStageEntry.[[Stage]] is equal "ready", return currentStageEntry.[[Result]].
+    if (currentStageEntry['[[Stage]]'] === "ready") return currentStageEntry['[[Result]]'];
+    // 4. Return the result of transforming RequestLink(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
+    return RequestLink(entry).then((entry) => {
         // a. Let module be entry.[[Module]].
         let mod = entry['[[Module]]'];
-        // b. Let status be the result of calling the ModuleEvaluation abstract operation of module with no arguments.
+        // b. Let status be ? module.ModuleEvaluation().
         let status = ModuleEvaluation.call(mod);
-        // c. ReturnIfAbrupt(status).
-        ReturnIfAbrupt(status);
-        // d. Return module.
+        // c. Return module.
         return mod;
     });
+    // BUG: spec missing storing the ready promise
 }

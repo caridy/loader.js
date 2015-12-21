@@ -1,7 +1,7 @@
 /*
 4. Registry Objects
 */
-export default class Registry() {
+export default class Registry {
     constructor () /* 4.1.1 */ {
         throw new Error('Registry Object cannot be created in user land.');
     }
@@ -16,7 +16,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "key+value").
@@ -29,7 +29,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "key").
@@ -42,7 +42,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "value").
@@ -55,7 +55,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError().
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
@@ -63,7 +63,7 @@ export default class Registry() {
         // 6. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
         for (var [k, v] of entries) {
             // a. If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, return p.[[value]].
-            if (k && (k === key)) return v.
+            if (k && (k === key)) return v;
         }
         // 7. Return undefined.
         return undefined;
@@ -75,11 +75,11 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. If Type(entry) is not Object, throw a TypeError exception.
         if (typeof entry !== "object") throw new TypeError();
         // 5. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 6. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 7. Let entries be the List that is the value of M’s [[MapData]] internal slot.
@@ -108,7 +108,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError().
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
@@ -116,7 +116,7 @@ export default class Registry() {
         // 6. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
         for (var [k, v] of entries) {
             // If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, then, return true.
-            if (k && (k === key)) return true.
+            if (k && (k === key)) return true;
         }
         // 7. Return false.
         return false;
@@ -128,7 +128,7 @@ export default class Registry() {
         // 2. If Type(registry) is not Object, throw a TypeError exception.
         if (typeof registry !== "object") throw new TypeError();
         // 3. If registry does not have all of the internal slots of a Registry Instance (4.4), throw a TypeError exception.
-        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]') throw new TypeError();
+        if (!Object.getOwnPropertyDescriptor(registry, '[[RegistryMap]]')) throw new TypeError();
         // 4. Let M be registry.[[RegistryMap]].
         let M = registry['[[RegistryMap]]'];
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.

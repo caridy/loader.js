@@ -29,9 +29,9 @@ export default class Loader{
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
-        HowToDoThis();
+        if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
-        HowToDoThis();
+        if (!loader['[[Registry]]']) throw new TypeError();
         // 4. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key, runs the following steps:
         return Resolve(loader, name, referrer).then((key) => {
             // a. Let entry be EnsureRegistered(loader, key).
@@ -46,9 +46,9 @@ export default class Loader{
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
-        HowToDoThis();
+        if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
-        HowToDoThis();
+        if (!loader['[[Registry]]']) throw new TypeError();
         // 4. Return Resolve(loader, name, referrer).
         return Resolve(loader, name, referrer);
     }
@@ -58,9 +58,9 @@ export default class Loader{
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
-        HowToDoThis();
+        if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
-        HowToDoThis();
+        if (!loader['[[Registry]]']) throw new TypeError();
         try {
             // 4. If stage is undefined then let stage be "ready".
             if (stage === undefined) stage = "ready";
@@ -85,9 +85,9 @@ export default class Loader{
     get registry() {
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
-        HowToDoThis();
+        if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
-        HowToDoThis();
+        if (!loader['[[Registry]]']) throw new TypeError();
         // 2. Return loader.[[Registry]].
         return loader['[[Registry]]'];
     }

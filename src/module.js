@@ -1,12 +1,13 @@
-function /* 7.2.1 */ ParseExportsDescriptors(obj) {
+function /* 8.2.1 */ ParseExportsDescriptors(obj) {
     // TODO
 }
 
-function /* 7.2.2 */ CreateModuleMutator(module) {
+function /* 8.2.2 */ CreateModuleMutator(module) {
     // TODO
 }
 
-function /* 7.2.3 */ GetExportNames(exportStarStack) {
+// 8.2.3. GetExportNames(exportStarStack)
+function GetExportNames(exportStarStack) {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. Let exports be a new empty List.
@@ -18,58 +19,59 @@ function /* 7.2.3 */ GetExportNames(exportStarStack) {
     });
     // 4. For each pair in module.[[IndirectExports]], do:
     module['[[IndirectExports]]'].forEach((pair) => {
-        // a. Append pair.[[key]] to exports.
-        exports.push(pair['[[key]]']);
+        // a. Append pair.[[Key]] to exports.
+        exports.push(pair['[[Key]]']);
     });
     // 5. Return exports.
     return exports;
 }
 
-function /* 7.2.4 */ ResolveExport(exportName, resolveStack, exportStarStack) {
+// 8.2.4. ResolveExport(exportName, resolveStack, exportStarStack)
+function ResolveExport(exportName, resolveStack, exportStarStack) {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. If resolveStack contains a record r such that r.[[module]] is equal to module and r.[[exportName]] is equal to exportName, then
-    if (resolveStack.some((r) => r['[[module]]'] === module && r['[[exportName]]'] === exportName) {
+    if (resolveStack.some((r) => r['[[module]]'] === module && r['[[exportName]]'] === exportName)) {
         // a. Assert: this is a circular import request.
-        Assert: this is a circular import request.
+        HowToDoThis();
         // b. Throw a SyntaxError exception.
         throw new SyntaxError();
     }
     // 3. Append the record {[[module]]: module, [[exportName]]: exportName} to resolveStack.
     resolveStack.push({
-        [[module]]: module,
-        [[exportName]]: exportName
+        '[[module]]': module,
+        '[[exportName]]': exportName
     });
-    // 4. Let exports be module.[[LocalExports]].
-    let exports = module['[[LocalExports]]'];
-    // 5. Let pair be the pair in exports such that pair.[[key]] is equal to exportName.
-    let pair = exports.find((pair) => pair['[[key]]'] === exportName);
-    // 6. If pair is defined, then:
-    if (pair) {
+    // 4. Let localExports be module.[[LocalExports]].
+    let localExports = module['[[LocalExports]]'];
+    // 5. Let localPair be the pair in localExports such that pair.[[Key]] is equal to exportName.
+    let localPair = localExports.find((pair) => pair['[[Key]]'] === exportName);
+    // 6. If localPair is defined, then:
+    if (localPair) {
         // a. Return the Record { [[module]]: module, [[bindingName]]: exportName }.
         return {
-            [[module]]: module,
-            [[bindingName]]: exportName
+            '[[module]]': module,
+            '[[bindingName]]': exportName
         };
     }
     // 7. Let exports be module.[[IndirectExports]].
     let exports = module['[[IndirectExports]]'];
-    // 8. Let pair be the pair in exports such that pair.[[key]] is equal to exportName.
-    let pair = exports.find((pair) => pair['[[key]]'] === exportName);
-    // 9. If pair is defined, then return pair.[[value]].
-    if (pair) {
-        return pair['[[value]]'];
-    }
+    // 8. Let pair be the pair in exports such that pair.[[Key]] is equal to exportName.
+    let pair = exports.find((pair) => pair['[[Key]]'] === exportName);
+    // 9. If pair is defined, then return pair.[[Value]].
+    if (pair) return pair['[[Value]]'];
     // 10. Return null.
     return null;
 }
 
-function /* 7.2.5 */ ModuleDeclarationInstantiation() {
+// 8.2.5. ModuleDeclarationInstantiation()
+function ModuleDeclarationInstantiation() {
     // 1. Return undefined.
     return undefined;
 }
 
-function /* 7.2.6 */ ModuleEvaluation() {
+// 8.2.6. ModuleEvaluation()
+function ModuleEvaluation() {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. Let evaluate be module.[[Evaluate]].
@@ -83,7 +85,7 @@ function /* 7.2.6 */ ModuleEvaluation() {
 export default class Module {
     constructor() {
         // 1. Let realm be the current Realm.
-        let realm = the current Realm.
+        let realm = Object.create(null);
         // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
         let env = NewModuleEnvironment(realm['[[globalEnv]]']);
         // 3. Let exportDescriptors be ParseExportsDescriptors(descriptors). // TODO: interleave the subsequent loop with parsing?
@@ -95,7 +97,7 @@ export default class Module {
         // 6. Let exportNames be a new empty List.
         let exportNames = [];
         // 7. Let envRec be env’s environment record.
-        let envRec = env’s environment record.
+        let envRec = Object.create(null);
         // 8. For each desc in exportDescriptors, do:
         exportDescriptors.forEach((desc) => {
             // a. Let exportName be desc.[[Name]].
@@ -103,46 +105,47 @@ export default class Module {
             // b. Append exportName to exportNames.
             exportNames.push(exportName);
             // c. If desc is an Indirect Export Descriptor, then:
-            if (desc is an Indirect Export Descriptor) {
+            if (desc['[[IndirectExportDescriptor]]']) {
                 // i. Let otherMod be desc.[[Module]].
                 let otherMod = desc['[[Module]]'];
                 // ii. Let resolution be otherMod.ResolveExport(desc.[[Import]], « »).
-                let resolution = ResolveExport.call(otherMod, desc['[[Import]]'], « »);
+                let resolution = ResolveExport.call(otherMod, desc['[[Import]]']);
                 // iii. ReturnIfAbrupt(resolution).
                 ReturnIfAbrupt(resolution);
                 // iv. If resolution is null, then throw a SyntaxError exception.
                 if (resolution === null) {
                     throw new SyntaxError();
                 }
-                // v. Append the record {[[key]]: exportName, [[value]]: resolution} to indirectExports.
+                // v. Append the record {[[Key]]: exportName, [[Value]]: resolution} to indirectExports.
                 indirectExports.push({
-                    [[key]]: exportName,
-                    [[value]]: resolution
+                    '[[Key]]': exportName,
+                    '[[Value]]': resolution
                 });
             // d. Else:
             } else {
                 // i. Append exportName to localExports.
                 localExports.push(exportName);
                 // ii. If desc is an Immutable Export Descriptor, then:
-                if (desc is an Immutable Export Descriptor) {
+                if (desc['[[ImmutableExportDescriptor]]']) {
                     // 1. Let status be envRec.CreateImmutableBinding(exportName, true).
-                    let status = envRec.CreateImmutableBinding(exportName, true).
+                    let status = CreateImmutableBinding.call(envRec, exportName, true).
                     // 2. Assert: status is not an abrupt completion.
-                    Assert: status is not an abrupt completion.
+                    HowToDoThis();
                 // iii. Else:
                 } else {
                     // 1. Assert: desc is a Mutable Export Descriptor.
-                    Assert: desc is a Mutable Export Descriptor.
+                    HowToDoThis();
                     // 2. Let status be envRec.CreateMutableBinding(exportName, false).
-                    let status = envRec.CreateMutableBinding(exportName, false).
+                    let status = CreateMutableBinding.call(envRec, exportName, false).
                     // 3. Assert: status is not an abrupt completion.
-                    Assert: status is not an abrupt completion.
+                    HowToDoThis()
                 }
                 // iv. If desc.[[Initialized]] is true, then:
                 if (desc['[[Initialized]]'] === true) {
                     // 1. Call envRec.InitializeBinding(exportName, desc.[[Value]]).
-                    envRec.InitializeBinding(exportName, desc['[[Value]]']);
+                    InitializeBinding.call(envRec, exportName, desc['[[Value]]']);
                 }
+            }
         });
         // 9. If evaluate is undefined, then let evaluated be true. Otherwise let evaluated be false.
         if (evaluate === undefined) {
@@ -169,16 +172,15 @@ export default class Module {
         if (executor !== undefined) {
             // a. Let mutator be CreateModuleMutator(mod).
             let mutator = CreateModuleMutator(mod);
-            // b. Let status be executor(mutator, ns).
-            let status = executor(mutator, ns);
-            // c. ReturnIfAbrupt(status).
-            ReturnIfAbrupt(status);
+            // b. Let status be ? executor(mutator, ns).
+            executor(mutator, ns);
         }
         // 14. Return ns.
         return ns;
     }
 }
 
-Module.isExecuted = function () {
+// 8.4.1. Module.evaluate(m)
+Module.evaluate = function (m) {
     // TODO: way to force evaluation of a module namespace exotic object (Reflect.Module.evaluate(m)? m[Reflect.Module.evaluate]()?)
 };
