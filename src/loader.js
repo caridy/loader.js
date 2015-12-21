@@ -1,16 +1,28 @@
 import {
-    Resolve,
     CreateRegistry,
     IsValidStageValue,
-    EnsureRegistered,
 } from "./abstracts.js";
+
+import {
+    Resolve,
+    EnsureRegistered,
+} from "./auxiliaries.js";
+
+import {
+    OrdinaryCreateFromConstructor
+} from "./262.js";
+
+// TODO: remove helpers
+import {
+    HowToDoThis
+} from "./utils.js";
 
 // 3.1.1. LoaderConstructor()
 function LoaderConstructor() {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
-    HowToDoThis();
+    HowToDoThis('LoaderConstructor', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%LoaderPrototype%", «[[Realm]], [[Registry]]»).
-    let O = OrdinaryCreateFromConstructor(ModuleStatus, "%ModuleStatusPrototype%", ['[[Realm]]', '[[Registry]]']);
+    let O = OrdinaryCreateFromConstructor(Loader, "%LoaderPrototype%", ['[[Realm]]', '[[Registry]]']);
     // 3. Set O’s [[Registry]] internal slot to CreateRegistry().
     O['[[Registry]]'] = CreateRegistry();
     // 4. Return O.

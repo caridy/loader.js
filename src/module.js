@@ -138,7 +138,7 @@ export default class Module {
                     // 2. Let status be envRec.CreateMutableBinding(exportName, false).
                     let status = CreateMutableBinding.call(envRec, exportName, false).
                     // 3. Assert: status is not an abrupt completion.
-                    HowToDoThis()
+                    HowToDoThis();
                 }
                 // iv. If desc.[[Initialized]] is true, then:
                 if (desc['[[Initialized]]'] === true) {

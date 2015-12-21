@@ -46,3 +46,19 @@ export function promiseCall(f, ...args) {
         return Promise.reject(e);
     }
 }
+
+export function assert(value) {
+    if (!value) {
+        throw new Error('Loader Spec Error: ' + value);
+    }
+}
+
+export function HowToDoThis(algo, step) {
+    if (!algo) {
+        throw new Error('HowToDoThis(algo, step) is missing the `algo` argument');
+    }
+    if (!step) {
+        throw new Error('HowToDoThis(algo, step) is missing the `step` argument');
+    }
+    console.log(`TODO: algo [${algo}], step: ${step}`);
+}

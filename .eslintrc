@@ -6,7 +6,16 @@
         "restParams": true,
         "modules": true,
         "classes": true,
-        "forOf": true
+        "forOf": true,
+        "objectLiteralShorthandMethods": true,
+        "objectLiteralShorthandProperties": true,
+        "templateStrings": true,
+        "spread": true,
+        "destructuring": true
     },
-    "rules": {}
+    "rules": {
+        "semi": 2,
+        "eqeqeq": 2,
+        "indent": 2
+    }
 }
