@@ -54,13 +54,10 @@ function writeBundle(bundle, {minify = false}) {
 
     let result = bundle.generate({
         format: 'umd',
-        moduleName: 'loader',
+        moduleName: 'loaderPolyfill',
         banner: copyright,
         sourceMap: true,
         sourceMapFile: dest,
-        globals: {
-            loader: 'Reflect.Loader',
-        },
     });
 
     if (minify) {
