@@ -10,6 +10,10 @@ Loader.js is a spec compliance polyfill for [WHATWG Loader][].
 Overview
 --------
 
+**This is a referral implementation for the current draft, and should not be used in production.**
+
+**This is a living implementation, and changes in the API can still happen at our discretion.**
+
 **WHATWG Loader is a work-in-progress specification, the v1 docs can be found on the website:**
 
 **<https://whatwg.github.io/loader/>**
