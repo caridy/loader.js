@@ -6,12 +6,16 @@ import {
     PassThroughPromise,
     GetStateValue,
     SetStateToMax,
-    GetMethod,
     ModuleEvaluation,
 } from './abstracts.js';
 
 import {
+    GetMethod,
+} from './262.js';
+
+import {
     promiseCall,
+    HowToDoThis,
 } from './utils.js';
 
 // 6.2.1. RequestFetch(entry)
@@ -51,7 +55,7 @@ export function RequestTranslate(entry) {
     // 4. If translateStageEntry.[[Result]] is not undefined, return translateStageEntry.[[Result]].
     if (translateStageEntry['[[Result]]'] !== undefined) return translateStageEntry['[[Result]]'];
     // 5. Let hook be GetMethod(entry.[[Loader]], @@translate).
-    let hook = entry['[[Loader]]'][Reflect.Loader.translate];
+    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.translate);
     // 6. Let p be the result of transforming RequestFetch(entry) with a fulfillment handler that, when called with argument payload, runs the following steps:
     let p = RequestFetch(entry).then((payload) => {
         // a. Let p0 be the result of promise-calling hook(entry, payload).
@@ -83,7 +87,7 @@ export function RequestInstantiate(entry) {
     // 4. If instantiateStageEntry.[[Result]] is not undefined, return instantiateStageEntry.[[Result]].
     if (instantiateStageEntry['[[Result]]'] !== undefined) return instantiateStageEntry['[[Result]]'];
     // 5. Let hook be GetMethod(entry.[[Loader]], @@instantiate).
-    let hook = entry['[[Loader]]'][Reflect.Loader.instantiate];
+    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.instantiate);
     // 6. Let p be the result of transforming RequestTranslate(entry) with a fulfillment handler that, when called with argument source, runs the following steps:
     let p = RequestTranslate(entry).then((source) => {
         // a. Let p0 be the result of promise-calling hook(entry, source).
@@ -175,11 +179,11 @@ export function RequestLink(entry) {
     // 5. Return the result of transforming RequestSatisfy(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
     return RequestSatisfy(entry).then((entry) => {
         // a. Assert: entry’s whole dependency graph is in "link" or "ready" stage.
-        HowToDoThis();
+        HowToDoThis('6.2.5. RequestLink(entry)', '5.a. Assert: entry’s whole dependency graph is in "link" or "ready" stage.');
         // b. Let status be ? Link(entry).
         let status = Link(entry);
         // c. Assert: entry’s whole dependency graph is in "ready" stage.
-        HowToDoThis();
+        HowToDoThis('6.2.5. RequestLink(entry)', '5.c. Assert: entry’s whole dependency graph is in "ready" stage.');
         // d. Return entry.
         return entry;
     });

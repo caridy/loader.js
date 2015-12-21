@@ -2,6 +2,10 @@ import {
     assert,
 } from './utils.js';
 
+import {
+    GetMethod,
+} from './262.js';
+
 import ModuleStatus from "./module-status.js";
 
 // 6.1.1. EnsureRegistered(loader, key)
@@ -37,7 +41,7 @@ export function Resolve(loader, name, referrer) {
     // 3. Assert: Type(referrer) is String.
     assert(typeof referrer === 'string');
     // 1. Let hook be GetMethod(loader, @@resolve).
-    let hook = loader[Reflect.Loader.resolve];
+    let hook = GetMethod(loader, Reflect.Loader.resolve);
     // 2. Return the result of promise-calling hook(name, referrer).
     return hook(name, referrer);
 }

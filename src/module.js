@@ -1,3 +1,8 @@
+// TODO: remove helpers
+import {
+    HowToDoThis,
+} from "./utils.js";
+
 function /* 8.2.1 */ ParseExportsDescriptors(obj) {
     // TODO
 }
@@ -33,7 +38,7 @@ function ResolveExport(exportName, resolveStack, exportStarStack) {
     // 2. If resolveStack contains a record r such that r.[[module]] is equal to module and r.[[exportName]] is equal to exportName, then
     if (resolveStack.some((r) => r['[[module]]'] === module && r['[[exportName]]'] === exportName)) {
         // a. Assert: this is a circular import request.
-        HowToDoThis();
+        HowToDoThis('ResolveExport', '2.a. Assert: this is a circular import request.');
         // b. Throw a SyntaxError exception.
         throw new SyntaxError();
     }
@@ -134,7 +139,7 @@ export default class Module {
                 // iii. Else:
                 } else {
                     // 1. Assert: desc is a Mutable Export Descriptor.
-                    HowToDoThis();
+                    HowToDoThis('class Module {}', '8.d.iii.1. Assert: desc is a Mutable Export Descriptor.');
                     // 2. Let status be envRec.CreateMutableBinding(exportName, false).
                     let status = CreateMutableBinding.call(envRec, exportName, false).
                     // 3. Assert: status is not an abrupt completion.

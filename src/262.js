@@ -8,3 +8,17 @@ export function OrdinaryCreateFromConstructor (constructor, intrinsicDefaultProt
         return descriptors;
     }, {}));
 }
+
+// 7.1.12 ToString ( argument )
+export function ToString(value) {
+    // relying on the underlaying implementation
+    return typeof value === 'string' ? value : value + '';
+}
+
+// 7.3.9 GetMethod (V, P)
+export function GetMethod(v, p) {
+    let func = v[p];
+    if (!func) return undefined;
+    if (typeof func !== 'function') throw new TypeError();
+    return func;
+}

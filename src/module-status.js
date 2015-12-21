@@ -6,12 +6,21 @@ import {
     UpgradeToStage,
 } from "./abstracts.js";
 
+import {
+    ToString
+} from "./262.js";
+
+// TODO: remove helpers
+import {
+    HowToDoThis
+} from "./utils.js";
+
 // 5. ModuleStatus Objects
 
 // 5.2.1. ModuleStatus(loader, key[, module])
 function ModuleStatusConstructor(loader, key, module) {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
-    HowToDoThis();
+    HowToDoThis('ModuleStatusConstructor', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. If Type(loader) is not Object, throw a TypeError exception.
     if (typeof loader !== "object") throw new TypeError();
     // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
@@ -140,7 +149,7 @@ export default class ModuleStatus {
             // g. Let moduleStatus be ? DefinePropertyOrThrow(O, "entry", moduleStatusDesc).
             let moduleStatus = Object.defineProperty(O, "entry", moduleStatusDesc);
             // h. Let status be ? CreateDataProperty(array, ? ToString(n), O).
-            array[n] = O;
+            array[ToString(n)] = O;
             // i. Increment n by 1.
             n += 1;
         }
@@ -260,7 +269,7 @@ export default class ModuleStatus {
             // d. Else,
             } else {
                 // i. Fulfill stageEntry.[[Result]] with value.
-                HowToDoThis();
+                HowToDoThis('ModuleStatus.prototype.resolve', '8.d.i. Fulfill stageEntry.[[Result]] with value.');
             }
             // e. UpgradeToStage(entry, stageValue).
             UpgradeToStage(entry, stageValue);
@@ -309,7 +318,7 @@ export default class ModuleStatus {
             // d. Else,
             } else {
                 // i. Reject stageEntry.[[Result]] with value.
-                HowToDoThis();
+                HowToDoThis('ModuleStatus.prototype.reject', '8.d.i. Reject stageEntry.[[Result]] with value.');
             }
             // e. UpgradeToStage(entry, stageValue).
             UpgradeToStage(entry, stageValue);

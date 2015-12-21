@@ -141,10 +141,6 @@ export function /* 2.3.1 */ PassThroughPromise(p) {
     return Promise.resolve(p).then((value) => value);
 }
 
-export function GetMethod() {
-
-}
-
 export function ModuleEvaluation() {
 
 }
