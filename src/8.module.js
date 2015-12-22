@@ -3,16 +3,18 @@ import {
     HowToDoThis,
 } from "./utils.js";
 
-function /* 8.2.1 */ ParseExportsDescriptors(obj) {
-    // TODO
+// 8.2.1. ParseExportsDescriptors(obj)
+export function ParseExportsDescriptors(obj) {
+    throw new Error('TODO');
 }
 
-function /* 8.2.2 */ CreateModuleMutator(module) {
-    // TODO
+// 8.2.2. CreateModuleMutator(module)
+export function CreateModuleMutator(module) {
+    throw new Error('TODO');
 }
 
 // 8.2.3. GetExportNames(exportStarStack)
-function GetExportNames(exportStarStack) {
+export function GetExportNames(exportStarStack) {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. Let exports be a new empty List.
@@ -32,7 +34,7 @@ function GetExportNames(exportStarStack) {
 }
 
 // 8.2.4. ResolveExport(exportName, resolveStack, exportStarStack)
-function ResolveExport(exportName, resolveStack, exportStarStack) {
+export function ResolveExport(exportName, resolveStack, exportStarStack) {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. If resolveStack contains a record r such that r.[[module]] is equal to module and r.[[exportName]] is equal to exportName, then
@@ -70,13 +72,13 @@ function ResolveExport(exportName, resolveStack, exportStarStack) {
 }
 
 // 8.2.5. ModuleDeclarationInstantiation()
-function ModuleDeclarationInstantiation() {
+export function ModuleDeclarationInstantiation() {
     // 1. Return undefined.
     return undefined;
 }
 
 // 8.2.6. ModuleEvaluation()
-function ModuleEvaluation() {
+export function ModuleEvaluation() {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. Let evaluate be module.[[Evaluate]].
@@ -87,7 +89,11 @@ function ModuleEvaluation() {
     return evaluate();
 }
 
+// 8.3. The Module Constructor
+// 8.4. Properties of the Module Constructor
+// 8.5. Properties of Module Instances
 export default class Module {
+    // 8.3.1. Module(descriptors[, executor[, evaluate]])
     constructor() {
         // 1. Let realm be the current Realm.
         let realm = Object.create(null);
@@ -187,5 +193,6 @@ export default class Module {
 
 // 8.4.1. Module.evaluate(m)
 Module.evaluate = function (m) {
+    throw new Error('TODO');
     // TODO: way to force evaluation of a module namespace exotic object (Reflect.Module.evaluate(m)? m[Reflect.Module.evaluate]()?)
 };

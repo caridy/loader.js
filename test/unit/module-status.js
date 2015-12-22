@@ -1,7 +1,7 @@
 import expect from 'expect';
-import Loader from '../../src/loader';
-import Module from '../../src/module';
-import ModuleStatus from '../../src/module-status';
+import Loader from '../../src/3.loader.js';
+import Module from '../../src/8.module.js';
+import ModuleStatus from '../../src/5.module-status.js';
 
 describe('Reflect.Module.ModuleStatus', () => {
     it('exports a class', () => {

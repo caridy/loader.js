@@ -1,22 +1,128 @@
 import {
-    EnsureRegistered,
-} from './auxiliaries.js';
+    GetMethod,
+    IsCallable,
+} from './262.js';
 
 import {
     PassThroughPromise,
-    GetStateValue,
-    SetStateToMax,
-    ModuleEvaluation,
-} from './abstracts.js';
+} from './2.conventions.js';
+
+import Loader from './3.loader.js';
+
+import ModuleStatus, {
+    GetCurrentStage,
+    GetStage,
+    UpgradeToStage,
+} from './5.module-status.js';
 
 import {
-    GetMethod,
-} from './262.js';
+    Link,
+} from './7.linking.js';
+
+import {
+    ModuleEvaluation,
+} from './8.module.js';
 
 import {
     promiseCall,
     HowToDoThis,
+    assert,
 } from './utils.js';
+
+// 6. Loading Semantics
+
+// 6.1. Auxiliary Operations
+
+// 6.1.1. EnsureRegistered(loader, key)
+export function EnsureRegistered(loader, key) {
+    // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
+    assert(loader['[[Registry]]']);
+    // 2. Assert: Type(key) is String.
+    assert(typeof key === 'string');
+    // 3. Let registry be loader.[[Registry]].
+    let registry = loader['[[Registry]]'];
+
+    // 4. Let pair be the entry in loader.[[Registry]] such that pair.[[key]] is equal to key.
+    let pair;
+    for (var [k, v] of loader['[[Registry]]']) {
+        if (k === key) pair = {'[[key]]': k, '[[value]]': v};
+    }
+
+    // 5. If pair exists, then:
+    let entry;
+    if (pair) {
+        // a. Let entry be pair.[[value]].
+        entry = pair['[[value]]'];
+    }
+    // 6. Else:
+    else {
+        // a. Let entry be a new ModuleStatus(loader, key).
+        entry = new ModuleStatus(loader, key);
+    }
+
+    // 7. Return entry.
+    return entry;
+}
+
+// 6.1.2. Resolve(loader, name, referrer)
+export function Resolve(loader, name, referrer) {
+    // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
+    assert(loader['[[Registry]]']);
+    // 2. Assert: Type(name) is String.
+    assert(typeof name === 'string');
+    // 3. Assert: Type(referrer) is String.
+    // BASHED: assert(typeof referrer === 'string');
+    // 1. Let hook be GetMethod(loader, @@resolve).
+    let hook = GetMethod(loader, Loader.resolve);
+    // 2. Return the result of promise-calling hook(name, referrer).
+    return hook(name, referrer);
+}
+
+// 6.1.3. ExtractDependencies(entry, optionalInstance, source)
+export function ExtractDependencies(entry, optionalInstance, source) {
+    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert(entry['[[Pipeline]]']);
+    // 2. Let instance be ? Instantiation(entry.[[Loader]], optionalInstance, source).
+    let instance = Instantiation(entry['[[Loader]]'], optionalInstance, source);
+    // 3. Let deps be a new empty List.
+    let deps = [];
+    // 4. If instance is a Module Record, then:
+    if (instance['[[Namespace]]']) {
+        // a. Assert: instance is a Source Text Module Record.
+        assert(instance instanceof SourceTextModuleRecord);
+        // b. Set instance.[[ModuleStatus]] to entry.
+        instance['[[ModuleStatus]]'] = entry;
+        // c. For each dep in instance.[[RequestedModules]], do:
+        instance['[[RequestedModules]]'].forEach((dep) => {
+            // i. Append the record { [[RequestName]]: dep, [[Key]]: undefined, [[ModuleStatus]]: undefined } to deps.
+            deps.push({
+                '[[RequestName]]': dep,
+                '[[Key]]': undefined,
+                '[[ModuleStatus]]': undefined,
+            });
+        });
+    }
+    // 5. Set entry.[[Dependencies]] to deps.
+    entry['[[Dependencies]]'] = deps;
+    // 6. Set entry.[[Module]] to instance.
+    entry['[[Module]]'] = instance;
+}
+
+// 6.1.4. Instantiation(loader, result, source)
+export function Instantiation(loader, result, source) {
+    // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
+    assert(loader['[[Registry]]']);
+    // 2. If result is undefined, then return ParseModule(source).
+    if (result === undefined) return ParseModule(source);
+    // 2. If IsCallable(result) is false then throw a new TypeError.
+    if (IsCallable(result) === false) throw new TypeError('result most be callable');
+    // 3. Set result.[[Realm]] to loader.[[Realm]].
+    result['[[Realm]]'] = loader['[[Realm]]'];
+    // 4. Return result.
+    return result;
+}
+
+// 6.2. Loading Operations
 
 // 6.2.1. RequestFetch(entry)
 export function RequestFetch(entry) {
@@ -29,7 +135,7 @@ export function RequestFetch(entry) {
     // 4. If fetchStageEntry.[[Result]] is not undefined, return fetchStageEntry.[[Result]].
     if (fetchStageEntry['[[Result]]'] !== undefined) return fetchStageEntry['[[Result]]'];
     // 5. Let hook be GetMethod(entry.[[Loader]], @@fetch).
-    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.fetch);
+    let hook = GetMethod(entry['[[Loader]]'], Loader.fetch);
     // 6. Let p0 be the result of promise-calling hook(entry, entry.[[Key]]).
     let p0 = promiseCall(hook, entry, entry['[[Key]]']);
     // 7. Let p1 be the result of transforming p0 with a new pass-through promise.
@@ -39,10 +145,10 @@ export function RequestFetch(entry) {
         // a. UpgradeToStage(entry, "translate").
         UpgradeToStage(entry, "translate");
     });
-    // 9. Set translateStageEntry.[[Result]] to p.
-    translateStageEntry['[[Result]]'] = p;
+    // 9. Set fetchStageEntry.[[Result]] to p.
+    fetchStageEntry['[[Result]]'] = p1;
     // 10. Return p1.
-    return p;
+    return p1;
 }
 
 // 6.2.2. RequestTranslate(entry)
@@ -55,7 +161,7 @@ export function RequestTranslate(entry) {
     // 4. If translateStageEntry.[[Result]] is not undefined, return translateStageEntry.[[Result]].
     if (translateStageEntry['[[Result]]'] !== undefined) return translateStageEntry['[[Result]]'];
     // 5. Let hook be GetMethod(entry.[[Loader]], @@translate).
-    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.translate);
+    let hook = GetMethod(entry['[[Loader]]'], Loader.translate);
     // 6. Let p be the result of transforming RequestFetch(entry) with a fulfillment handler that, when called with argument payload, runs the following steps:
     let p = RequestFetch(entry).then((payload) => {
         // a. Let p0 be the result of promise-calling hook(entry, payload).
@@ -87,11 +193,11 @@ export function RequestInstantiate(entry) {
     // 4. If instantiateStageEntry.[[Result]] is not undefined, return instantiateStageEntry.[[Result]].
     if (instantiateStageEntry['[[Result]]'] !== undefined) return instantiateStageEntry['[[Result]]'];
     // 5. Let hook be GetMethod(entry.[[Loader]], @@instantiate).
-    let hook = GetMethod(entry['[[Loader]]'], Reflect.Loader.instantiate);
+    let hook = GetMethod(entry['[[Loader]]'], Loader.instantiate);
     // 6. Let p be the result of transforming RequestTranslate(entry) with a fulfillment handler that, when called with argument source, runs the following steps:
     let p = RequestTranslate(entry).then((source) => {
         // a. Let p0 be the result of promise-calling hook(entry, source).
-        let p0 = promiseCalling(hook, entry, source);
+        let p0 = promiseCall(hook, entry, source);
         // b. Let p1 be the result of transforming p0 with a new pass-through promise.
         let p1 = PassThroughPromise(p0);
         // c. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument optionalInstance, runs the following steps:
@@ -100,7 +206,11 @@ export function RequestInstantiate(entry) {
             ExtractDependencies(entry, optionalInstance, source);
             // ii. UpgradeToStage(entry, "satisfy").
             UpgradeToStage(entry, "satisfy");
-        });
+        })
+// TODO: fix the shallow
+.catch((err) => {
+    console.log(err.stack || err);
+})
         // d. Return p1.
         return p1;
     });
@@ -115,13 +225,13 @@ export function RequestSatisfy(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert(entry['[[Pipeline]]']);
     // 2. Let satisfyStageEntry be GetStage(entry.[[Loader]], "satisfy").
-    let satisfyStageEntry = GetStage(entry['[[Loader]]'], "satisfy");
+    let satisfyStageEntry = GetStage(entry, "satisfy");
     // 3. If satisfyStageEntry is undefined, return a promise resolved with undefined.
     if (satisfyStageEntry === undefined) return Promise.resolve();
     // 4. If satisfyStageEntry.[[Result]] is not undefined, return satisfyStageEntry.[[Result]].
     if (satisfyStageEntry['[[Result]]'] !== undefined) return satisfyStageEntry['[[Result]]'];
     // 5. Let p be the result of transforming RequestInstantiate(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
-    let p = RequestInstantiate(entry).then((entry) => {
+    let p = RequestInstantiate(entry).then((TODO_optionalInstance_instead_of_entry) => {
         // a. Let depLoads be a new empty List.
         let depLoads = [];
         // b. For each pair in entry.[[Dependencies]], do:
@@ -191,7 +301,7 @@ export function RequestLink(entry) {
 }
 
 // 6.2.6. RequestReady(entry)
-export function RequestReady(ready) {
+export function RequestReady(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert(entry['[[Pipeline]]']);
     // 2. Let currentStageEntry be GetCurrentStage(entry).

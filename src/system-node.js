@@ -1,9 +1,9 @@
 import './patches.js';
 
-import Loader from "./loader.js";
+import Loader from "./3.loader.js";
 import NodeLoader from './loader-node.js';
-import Module from "./module.js";
-import ModuleStatus from "./module-status.js";
+import Module from "./8.module.js";
+import ModuleStatus from "./5.module-status.js";
 
 if (!Reflect.Loader) Reflect.Loader = Loader;
 if (!Reflect.Module) Reflect.Module = Module;

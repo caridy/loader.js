@@ -1,6 +1,6 @@
 import expect from 'expect';
-import Loader from '../../src/loader';
-import Registry from '../../src/registry';
+import Loader from '../../src/3.loader.js';
+import Registry from '../../src/4.registry.js';
 
 describe('Registry', () => {
 

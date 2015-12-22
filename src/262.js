@@ -22,3 +22,14 @@ export function GetMethod(v, p) {
     if (typeof func !== 'function') throw new TypeError();
     return func;
 }
+
+// 7.2.3 IsCallable ( argument )
+export function IsCallable(argument) {
+    if (argument && typeof argument.call === 'function') return true;
+    return false;
+}
+
+// 15.2.1.18 Runtime Semantics: GetModuleNamespace( module )
+export function GetModuleNamespace(module) {
+    throw new Error('TODO');
+}

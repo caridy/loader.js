@@ -1,5 +1,5 @@
-import Module from "./module.js";
-import Loader from "./loader.js";
+import Loader from "./3.loader.js";
+import Module from "./8.module.js";
 
 let Reflect = {
     Module,

@@ -1,5 +1,5 @@
 import expect from 'expect';
-import Loader from '../../src/loader';
+import Loader from '../../src/3.loader.js';
 
 describe('Reflect.Loader', () => {
     it('exports a class', () => {
@@ -23,4 +23,9 @@ describe('Reflect.Loader', () => {
         expect(registry).toBeA('object');
         expect(registry.entries).toBeA('function');
     });
+    it('import()', () => {
+        let o = new Loader();
+        o.import('foo');
+    });
+
 });

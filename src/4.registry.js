@@ -1,8 +1,28 @@
-/*
-4. Registry Objects
-*/
+import {
+    OrdinaryCreateFromConstructor,
+} from './262.js';
+
+// 4. Registry Objects
+
+// 4.1. Abstract Operations for Registry Objects
+
+// 4.1.1. CreateRegistry()
+export function CreateRegistry() {
+    // 1. Let O be ? OrdinaryCreateFromConstructor(Registry, "%RegistryPrototype%", «[[RegistryMap]]» ).
+    let O = OrdinaryCreateFromConstructor(Registry, "%RegistryPrototype%", ['[[RegistryMap]]']);
+    // 2. Let M be ObjectCreate(%MapIteratorPrototype%, «[[Map]], [[MapNextIndex]], [[MapIterationKind]]»).
+    let M = new Map();
+    // 3. Set O’s [[RegistryMap]] internal slot to M.
+    O['[[RegistryMap]]'] = M;
+    // 4. Return O.
+    return O;
+}
+
+// 4.2. The Registry Constructor
+// 4.3. Properties of the Registry Constructor
+// 4.4. Properties of the Registry Prototype Object
 export default class Registry {
-    constructor () /* 4.1.1 */ {
+    constructor () /* 4.2 */ {
         throw new Error('Registry Object cannot be created in user land.');
     }
 

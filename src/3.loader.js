@@ -1,12 +1,16 @@
 import {
     CreateRegistry,
+} from "./4.registry.js";
+
+import {
     IsValidStageValue,
-} from "./abstracts.js";
+    LoadModule,
+} from "./5.module-status.js";
 
 import {
     Resolve,
     EnsureRegistered,
-} from "./auxiliaries.js";
+} from "./6.loading.js";
 
 import {
     OrdinaryCreateFromConstructor
