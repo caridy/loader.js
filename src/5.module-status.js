@@ -21,7 +21,7 @@ import {
 // 5.1.1. GetCurrentStage(entry)
 export function GetCurrentStage(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(Object.getOwnPropertyDescriptor(entry, '[[Module]]'));
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let stages be entry.[[Pipeline]].
     let stages = entry['[[Pipeline]]'];
     // 3. Return the first element of stages.

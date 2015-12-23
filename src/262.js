@@ -89,27 +89,27 @@ export function GetExportedNames(exportStarSet) {
     // 4. Let exportedNames be a new empty List.
     let exportedNames = [];
     // 5. For each ExportEntry Record e in module.[[LocalExportEntries]], do
-    for (let e in module['[[LocalExportEntries]]']) {
+    for (let e of module['[[LocalExportEntries]]']) {
         // a. Assert: module provides the direct binding for this export.
         HowToDoThis('15.2.1.16.2 GetExportedNames', '5.a. Assert: module provides the direct binding for this export.');
         // b. Append e.[[ExportName]] to exportedNames.
         exportedNames.push(e['[[ExportName]]']);
     }
     // 6. For each ExportEntry Record e in module.[[IndirectExportEntries]], do
-    for (let e in module['[[IndirectExportEntries]]']) {
+    for (let e of module['[[IndirectExportEntries]]']) {
         // a. Assert: module imports a specific binding for this export.
         HowToDoThis('15.2.1.16.2 GetExportedNames', '6.a. Assert: module imports a specific binding for this export.');
         // b. Append e.[[ExportName]] to exportedNames.
         exportedNames.push(e['[[ExportName]]']);
     }
     // 7. For each ExportEntry Record e in module.[[StarExportEntries]], do
-    for (let e in module['[[StarExportEntries]]']) {
+    for (let e of module['[[StarExportEntries]]']) {
         // a. Let requestedModule be ? HostResolveImportedModule(module, e.[[ModuleRequest]]).
         let requestedModule = HostResolveImportedModule(module, e['[[ModuleRequest]]']);
         // b. Let starNames be requestedModule.GetExportedNames(exportStarSet).
         let starNames = GetExportedNames.call(requestedModule, exportStarSet);
         // c. For each element n of starNames, do
-        for (let n in startNames) {
+        for (let n of startNames) {
             // i. If SameValue(n, "default") is false, then
             if (n !== 'default') {
                 // 1. If n is not an element of exportedNames, then
