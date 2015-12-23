@@ -12,3 +12,6 @@ let loaderPolyfill = new NodeLoader();
 if (!System.loader) System.loader = loaderPolyfill;
 
 export default loaderPolyfill;
+
+// the default loader in node should tap into node's require hooks to inject any
+// node module into the loader registry.

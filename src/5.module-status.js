@@ -31,7 +31,7 @@ export function GetCurrentStage(entry) {
 // 5.1.2. IsValidStageValue(stage)
 export function IsValidStageValue(stage) {
     // 1. Assert: Type(stage) is String.
-    assert(typeof stage === 'string');
+    assert(typeof stage === 'string', 'Type(stage) is String.');
     // 2. If stage is "fetch", "translate", "instantiate", "satisfy", "link" or "ready", return true.
     if (stage in ['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready']) return true;
     // 3. Else return false.
@@ -41,9 +41,9 @@ export function IsValidStageValue(stage) {
 // 5.1.3. GetStage(entry, stage)
 export function GetStage(entry, stage) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(Object.getOwnPropertyDescriptor(entry, '[[Module]]'));
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Assert: Type(stage) is String.
-    assert(typeof stage === 'string');
+    assert(typeof stage === 'string', 'Type(stage) is String.');
     // 3. Let stages be entry.[[Pipeline]].
     let stages = entry['[[Pipeline]]'];
     // 4. For each element entry of stages, do
@@ -58,9 +58,9 @@ export function GetStage(entry, stage) {
 // 5.1.4. LoadModule(entry, stage)
 export function LoadModule(entry, stage) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert('[[Module]]' in entry);
+    assert('[[Module]]' in entry, 'Type(stage) is String.');
     // 2. Assert: Type(stage) is String.
-    assert(typeof stage === 'string');
+    assert(typeof stage === 'string', 'Type(stage) is String.');
     // 3. If stage is "fetch", then:
     if (stage === "fetch") {
         // a. Return the result of transforming RequestFetch(entry) with a new pass-through promise.
@@ -113,9 +113,9 @@ export function LoadModule(entry, stage) {
 // 5.1.5. UpgradeToStage(entry, stage)
 export function UpgradeToStage(entry, stage) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(Object.getOwnPropertyDescriptor(entry, '[[Module]]'));
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Assert: Type(stage) is String.
-    assert(typeof stage === 'string');
+    assert(typeof stage === 'string', 'Type(stage) is String.');
     // 3. Let pipeline be entry.[[Pipeline]].
     let pipeline = entry['[[Pipeline]]'];
     // 4. Let stageEntry be GetStage(entry, stage).

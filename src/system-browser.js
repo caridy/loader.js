@@ -12,3 +12,7 @@ let loaderPolyfill = new BrowserLoader();
 if (!System.loader) System.loader = loaderPolyfill;
 
 export default loaderPolyfill;
+
+// the default loader in a browser should search for any `<script type="module"></script>`
+// in the current document, and act accordingly. it should also observe mutations
+// to identify new script tags with `type="module"` to handle them accordingly.

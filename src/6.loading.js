@@ -36,9 +36,9 @@ import {
 // 6.1.1. EnsureRegistered(loader, key)
 export function EnsureRegistered(loader, key) {
     // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
-    assert(loader['[[Registry]]']);
+    assert('[[Registry]]' in loader, 'loader must have all of the internal slots of a Loader Instance (3.5).');
     // 2. Assert: Type(key) is String.
-    assert(typeof key === 'string');
+    assert(typeof key === 'string', 'Type(key) is String.');
     // 3. Let registry be loader.[[Registry]].
     let registry = loader['[[Registry]]'];
 
@@ -67,11 +67,12 @@ export function EnsureRegistered(loader, key) {
 // 6.1.2. Resolve(loader, name, referrer)
 export function Resolve(loader, name, referrer) {
     // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
-    assert(loader['[[Registry]]']);
+    assert('[[Registry]]' in loader, 'loader must have all of the internal slots of a Loader Instance (3.5).');
     // 2. Assert: Type(name) is String.
-    assert(typeof name === 'string');
+    assert(typeof name === 'string', 'Type(name) is String.');
     // 3. Assert: Type(referrer) is String.
-    // BASHED: assert(typeof referrer === 'string');
+    // TODO: diverging from the spec because referrer can undefined
+    // assert(typeof referrer === 'string', 'Type(referrer) is String.');
     // 1. Let hook be GetMethod(loader, @@resolve).
     let hook = GetMethod(loader, Loader.resolve);
     // 2. Return the result of promise-calling hook(name, referrer).
@@ -114,7 +115,7 @@ export function ExtractDependencies(entry, optionalInstance, source) {
 // 6.1.4. Instantiation(loader, result, source)
 export function Instantiation(loader, result, source) {
     // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
-    assert(loader['[[Registry]]'], 'loader must have all of the internal slots of a Loader Instance (3.5).');
+    assert('[[Registry]]' in loader, 'loader must have all of the internal slots of a Loader Instance (3.5).');
     // 2. If result is undefined, then return ParseModule(source).
     if (result === undefined) return ParseModule(source);
     // 3. If IsCallable(result) is false then throw a new TypeError.
@@ -131,7 +132,7 @@ export function Instantiation(loader, result, source) {
 // 6.2.1. RequestFetch(entry)
 export function RequestFetch(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let fetchStageEntry be GetStage(entry, "fetch").
     let fetchStageEntry = GetStage(entry, "fetch");
     // 3. If fetchStageEntry is undefined, return a promise resolved with undefined.
@@ -158,6 +159,7 @@ export function RequestFetch(entry) {
 // 6.2.2. RequestTranslate(entry)
 export function RequestTranslate(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let translateStageEntry be GetStage(entry, "translate").
     let translateStageEntry = GetStage(entry, "translate");
     // 3. If translateStageEntry is undefined, return a promise resolved with undefined.
@@ -189,7 +191,7 @@ export function RequestTranslate(entry) {
 // 6.2.3. RequestInstantiate(entry)
 export function RequestInstantiate(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let instantiateStageEntry be GetStage(entry, "instantiate").
     let instantiateStageEntry = GetStage(entry, "instantiate");
     // 3. If instantiateStageEntry is undefined, return a promise resolved with undefined.
@@ -228,7 +230,7 @@ export function RequestInstantiate(entry) {
 // 6.2.4. RequestSatisfy(entry)
 export function RequestSatisfy(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let satisfyStageEntry be GetStage(entry.[[Loader]], "satisfy").
     let satisfyStageEntry = GetStage(entry, "satisfy");
     // 3. If satisfyStageEntry is undefined, return a promise resolved with undefined.
@@ -284,7 +286,7 @@ export function RequestSatisfy(entry) {
 // 6.2.5. RequestLink(entry)
 export function RequestLink(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let linkStageEntry be GetStage(entry, "link").
     let linkStageEntry = GetStage(entry, "link");
     // 3. If linkStageEntry is undefined, return a promise resolved with undefined.
@@ -308,7 +310,7 @@ export function RequestLink(entry) {
 // 6.2.6. RequestReady(entry)
 export function RequestReady(entry) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let currentStageEntry be GetCurrentStage(entry).
     let currentStageEntry = GetCurrentStage(entry);
     // 3. If currentStageEntry.[[Stage]] is equal "ready", return currentStageEntry.[[Result]].

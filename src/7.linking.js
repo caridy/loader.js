@@ -27,7 +27,7 @@ export function HostResolveImportedModule(module, requestName) {
     // 6. Let pair be the pair in entry.[[Dependencies]] such that pair.[[RequestName]] is equal to requestName.
     let pair = entry['[[Dependencies]]'].find((pair) => pair['[[RequestName]]'] === requestName);
     // 7. Assert: pair is defined.
-    assert(pair !== undefined);
+    assert(pair !== undefined, 'pair is defined.');
     // 8. Let depEntry be pair.[[ModuleStatus]].
     let depEntry = pair['[[ModuleStatus]]'];
     // 9. Let depStageEntry be GetCurrentStage(depEntry).
@@ -44,7 +44,7 @@ export function HostResolveImportedModule(module, requestName) {
 // 7.2.1. Link(root)
 export function Link(root) {
     // 1. Assert: root must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(root['[[Pipeline]]']);
+    assert('[[Pipeline]]' in root, 'root must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let deps be DependencyGraph(root).
     let deps = DependencyGraph(root);
     // 3. For each dep in deps, do:
@@ -88,7 +88,7 @@ export function Link(root) {
 // 7.2.2. DependencyGraph(root)
 export function DependencyGraph(root) {
     // 1. Assert: root must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(root['[[Pipeline]]'], 'root must have all of the internal slots of a ModuleStatus Instance (5.5).');
+    assert('[[Pipeline]]' in root, 'root must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let result be a new empty List.
     let result = [];
     // 3. Call ComputeDependencyGraph(root, result).
@@ -100,9 +100,9 @@ export function DependencyGraph(root) {
 // 7.2.3. ComputeDependencyGraph(entry, result)
 export function ComputeDependencyGraph(entry, result) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]'], 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Assert: result must be a List.
-    assert(Array.isArray(result));
+    assert(Array.isArray(result), 'result must be a List.');
     // 3. If entry is already in result, then return undefined.
     if (result.indexOf(entry) !== -1) return undefined;
     // 4. Append entry to result.
@@ -110,7 +110,7 @@ export function ComputeDependencyGraph(entry, result) {
     // 5. For each pair in entry.[[Dependencies]], do:
     for (let pair of entry['[[Dependencies]]']) {
         // a. Assert: pair.[[ModuleStatus]] is defined.
-        assert('[[ModuleStatus]]' in pair, 'pair.[[ModuleStatus]] is defined');
+        assert(pair['[[ModuleStatus]]'] !== undefined, 'pair.[[ModuleStatus]] is defined');
         // b. Call ComputeDependencyGraph(pair.[[ModuleStatus]], result).
         ComputeDependencyGraph(pair['[[ModuleStatus]]'], result);
     }
