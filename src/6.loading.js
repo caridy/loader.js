@@ -81,19 +81,22 @@ export function Resolve(loader, name, referrer) {
 // 6.1.3. ExtractDependencies(entry, optionalInstance, source)
 export function ExtractDependencies(entry, optionalInstance, source) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(entry['[[Pipeline]]']);
+    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let instance be ? Instantiation(entry.[[Loader]], optionalInstance, source).
     let instance = Instantiation(entry['[[Loader]]'], optionalInstance, source);
     // 3. Let deps be a new empty List.
     let deps = [];
     // 4. If instance is a Module Record, then:
-    if (instance['[[Namespace]]']) {
+    if ('[[Namespace]]' in instance) {
         // a. Assert: instance is a Source Text Module Record.
-        assert(instance instanceof SourceTextModuleRecord);
+        // TODO: diverging from spec because not only source text module records
+        // can have dependencies.
+        // assert('[[ECMAScriptCode]]' in instance, 'instance is a Source Text Module Record.');
         // b. Set instance.[[ModuleStatus]] to entry.
         instance['[[ModuleStatus]]'] = entry;
         // c. For each dep in instance.[[RequestedModules]], do:
-        instance['[[RequestedModules]]'].forEach((dep) => {
+        // TODO: divering to allow dynamic modules to request dependencies as well
+        (instance['[[RequestedModules]]'] || []).forEach((dep) => {
             // i. Append the record { [[RequestName]]: dep, [[Key]]: undefined, [[ModuleStatus]]: undefined } to deps.
             deps.push({
                 '[[RequestName]]': dep,
@@ -111,14 +114,15 @@ export function ExtractDependencies(entry, optionalInstance, source) {
 // 6.1.4. Instantiation(loader, result, source)
 export function Instantiation(loader, result, source) {
     // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
-    assert(loader['[[Registry]]']);
+    assert(loader['[[Registry]]'], 'loader must have all of the internal slots of a Loader Instance (3.5).');
     // 2. If result is undefined, then return ParseModule(source).
     if (result === undefined) return ParseModule(source);
-    // 2. If IsCallable(result) is false then throw a new TypeError.
-    if (IsCallable(result) === false) throw new TypeError('result most be callable');
-    // 3. Set result.[[Realm]] to loader.[[Realm]].
+    // 3. If IsCallable(result) is false then throw a new TypeError.
+    // TODO: if (IsCallable(result) === false) throw new TypeError('result most be callable');
+    //       it seems that result is an exotic object that is not callable
+    // 4. Set result.[[Realm]] to loader.[[Realm]].
     result['[[Realm]]'] = loader['[[Realm]]'];
-    // 4. Return result.
+    // 5. Return result.
     return result;
 }
 
@@ -203,14 +207,15 @@ export function RequestInstantiate(entry) {
         // c. Let p2 be the result of transforming p1 with a fulfillment handler that, when called with argument optionalInstance, runs the following steps:
         let p2 = p1.then((optionalInstance) => {
             // i. Let status be ? ExtractDependencies(entry, optionalInstance, source).
-            ExtractDependencies(entry, optionalInstance, source);
+            // TODO: diverging from the spec to collect the internal slot [[Module]] of
+            // the optionalInstance when possible, otherwise we get the namespace, which
+            // it not what we use internally.
+            ExtractDependencies(entry, optionalInstance && optionalInstance['[[Module]]'], source);
             // ii. UpgradeToStage(entry, "satisfy").
             UpgradeToStage(entry, "satisfy");
         })
 // TODO: fix the shallow
-.catch((err) => {
-    console.log(err.stack || err);
-})
+.catch((err) => console.log(err.stack || err));
         // d. Return p1.
         return p1;
     });

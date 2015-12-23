@@ -19,16 +19,16 @@ export function CreateRegistry() {
 }
 
 // 4.2. The Registry Constructor
-// 4.3. Properties of the Registry Constructor
+export default function Registry () {
+    throw new Error('Registry Object cannot be created in user land.');
+}
+
 // 4.4. Properties of the Registry Prototype Object
-export default class Registry {
-    constructor () /* 4.2 */ {
-        throw new Error('Registry Object cannot be created in user land.');
-    }
+Registry.prototype = {
 
     [ Symbol.iterator ]() /* 4.4.2 */ {
         return this.entries();
-    }
+    },
 
     entries() /* 4.4.3 */ {
         // 1. Let registry be this value.
@@ -41,7 +41,7 @@ export default class Registry {
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "key+value").
         return M.entries();
-    }
+    },
 
     keys() /* 4.4.4 */ {
         // 1. Let registry be this value.
@@ -54,7 +54,7 @@ export default class Registry {
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "key").
         return M.keys();
-    }
+    },
 
     values() /* 4.4.5 */ {
         // 1. Let registry be this value.
@@ -67,7 +67,7 @@ export default class Registry {
         let M = registry['[[RegistryMap]]'];
         // 5. Return CreateMapIterator(M, "value").
         return M.values();
-    }
+    },
 
     get(key) /* 4.4.6 */ {
         // 1. Let registry be this value.
@@ -87,7 +87,7 @@ export default class Registry {
         }
         // 7. Return undefined.
         return undefined;
-    }
+    },
 
     set(key, entry) /* 4.4.7 */ {
         // 1. Let registry be this value.
@@ -120,7 +120,7 @@ export default class Registry {
         M.set(key, p);
         // 11. Return registry.
         return registry;
-    }
+    },
 
     has(key) /* 4.4.8 */ {
         // 1. Let registry be this value.
@@ -140,7 +140,7 @@ export default class Registry {
         }
         // 7. Return false.
         return false;
-    }
+    },
 
     delete(key) /* 4.4.9 */ {
         // 1. Let registry be this value.
@@ -168,4 +168,7 @@ export default class Registry {
         return false;
     }
 
-}
+};
+
+// 4.3. Properties of the Registry Constructor
+Registry.prototype.constructor = Registry;

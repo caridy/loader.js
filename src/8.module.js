@@ -1,3 +1,9 @@
+import {
+    NewModuleEnvironment,
+    ModuleNamespaceCreate,
+    CreateMutableBinding,
+} from './262.js';
+
 // TODO: remove helpers
 import {
     HowToDoThis,
@@ -5,12 +11,16 @@ import {
 
 // 8.2.1. ParseExportsDescriptors(obj)
 export function ParseExportsDescriptors(obj) {
-    throw new Error('TODO');
+    console.log('TODO: Missing implementation for 8.2.1. ParseExportsDescriptors(obj)');
+    return [];
+    // TODO: throw new Error('TODO');
 }
 
 // 8.2.2. CreateModuleMutator(module)
 export function CreateModuleMutator(module) {
-    throw new Error('TODO');
+    console.log('TODO: Missing implementation for 8.2.2. CreateModuleMutator(module)');
+    return module;
+    // TODO: throw new Error('TODO');
 }
 
 // 8.2.3. GetExportNames(exportStarStack)
@@ -90,106 +100,102 @@ export function ModuleEvaluation() {
 }
 
 // 8.3. The Module Constructor
-// 8.4. Properties of the Module Constructor
-// 8.5. Properties of Module Instances
-export default class Module {
-    // 8.3.1. Module(descriptors[, executor[, evaluate]])
-    constructor() {
-        // 1. Let realm be the current Realm.
-        let realm = Object.create(null);
-        // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
-        let env = NewModuleEnvironment(realm['[[globalEnv]]']);
-        // 3. Let exportDescriptors be ParseExportsDescriptors(descriptors). // TODO: interleave the subsequent loop with parsing?
-        let exportDescriptors = ParseExportsDescriptors(descriptors);
-        // 4. Let localExports be a new empty List.
-        let localExports = [];
-        // 5. Let indirectExports be a new empty List.
-        let indirectExports = [];
-        // 6. Let exportNames be a new empty List.
-        let exportNames = [];
-        // 7. Let envRec be env’s environment record.
-        let envRec = Object.create(null);
-        // 8. For each desc in exportDescriptors, do:
-        exportDescriptors.forEach((desc) => {
-            // a. Let exportName be desc.[[Name]].
-            let exportName = desc['[[Name]]'];
-            // b. Append exportName to exportNames.
-            exportNames.push(exportName);
-            // c. If desc is an Indirect Export Descriptor, then:
-            if (desc['[[IndirectExportDescriptor]]']) {
-                // i. Let otherMod be desc.[[Module]].
-                let otherMod = desc['[[Module]]'];
-                // ii. Let resolution be otherMod.ResolveExport(desc.[[Import]], « »).
-                let resolution = ResolveExport.call(otherMod, desc['[[Import]]']);
-                // iii. ReturnIfAbrupt(resolution).
-                ReturnIfAbrupt(resolution);
-                // iv. If resolution is null, then throw a SyntaxError exception.
-                if (resolution === null) {
-                    throw new SyntaxError();
-                }
-                // v. Append the record {[[Key]]: exportName, [[Value]]: resolution} to indirectExports.
-                indirectExports.push({
-                    '[[Key]]': exportName,
-                    '[[Value]]': resolution
-                });
-            // d. Else:
-            } else {
-                // i. Append exportName to localExports.
-                localExports.push(exportName);
-                // ii. If desc is an Immutable Export Descriptor, then:
-                if (desc['[[ImmutableExportDescriptor]]']) {
-                    // 1. Let status be envRec.CreateImmutableBinding(exportName, true).
-                    let status = CreateImmutableBinding.call(envRec, exportName, true).
-                    // 2. Assert: status is not an abrupt completion.
-                    HowToDoThis();
-                // iii. Else:
-                } else {
-                    // 1. Assert: desc is a Mutable Export Descriptor.
-                    HowToDoThis('class Module {}', '8.d.iii.1. Assert: desc is a Mutable Export Descriptor.');
-                    // 2. Let status be envRec.CreateMutableBinding(exportName, false).
-                    let status = CreateMutableBinding.call(envRec, exportName, false).
-                    // 3. Assert: status is not an abrupt completion.
-                    HowToDoThis();
-                }
-                // iv. If desc.[[Initialized]] is true, then:
-                if (desc['[[Initialized]]'] === true) {
-                    // 1. Call envRec.InitializeBinding(exportName, desc.[[Value]]).
-                    InitializeBinding.call(envRec, exportName, desc['[[Value]]']);
-                }
+// 8.3.1. Module(descriptors[, executor[, evaluate]])
+export default function Module(descriptors, executor, evaluate) {
+    // 1. Let realm be the current Realm.
+    let realm = Object.create(null);
+    // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
+    let env = NewModuleEnvironment(realm['[[globalEnv]]']);
+    // 3. Let exportDescriptors be ParseExportsDescriptors(descriptors). // TODO: interleave the subsequent loop with parsing?
+    let exportDescriptors = ParseExportsDescriptors(descriptors);
+    // 4. Let localExports be a new empty List.
+    let localExports = [];
+    // 5. Let indirectExports be a new empty List.
+    let indirectExports = [];
+    // 6. Let exportNames be a new empty List.
+    let exportNames = [];
+    // 7. Let envRec be env’s environment record.
+    let envRec = Object.create(null);
+    // 8. For each desc in exportDescriptors, do:
+    for (var desc in exportDescriptors) {
+        // a. Let exportName be desc.[[Name]].
+        let exportName = desc['[[Name]]'];
+        // b. Append exportName to exportNames.
+        exportNames.push(exportName);
+        // c. If desc is an Indirect Export Descriptor, then:
+        if (desc['[[IndirectExportDescriptor]]']) {
+            // i. Let otherMod be desc.[[Module]].
+            let otherMod = desc['[[Module]]'];
+            // ii. Let resolution be otherMod.ResolveExport(desc.[[Import]], « »).
+            let resolution = ResolveExport.call(otherMod, desc['[[Import]]']);
+            // iii. ReturnIfAbrupt(resolution).
+            ReturnIfAbrupt(resolution);
+            // iv. If resolution is null, then throw a SyntaxError exception.
+            if (resolution === null) {
+                throw new SyntaxError();
             }
-        });
-        // 9. If evaluate is undefined, then let evaluated be true. Otherwise let evaluated be false.
-        if (evaluate === undefined) {
-            let evaluated = true;
+            // v. Append the record {[[Key]]: exportName, [[Value]]: resolution} to indirectExports.
+            indirectExports.push({
+                '[[Key]]': exportName,
+                '[[Value]]': resolution
+            });
+        // d. Else:
         } else {
-            let evaluated = false;
+            // i. Append exportName to localExports.
+            localExports.push(exportName);
+            // ii. If desc is an Immutable Export Descriptor, then:
+            if (desc['[[ImmutableExportDescriptor]]']) {
+                // 1. Let status be envRec.CreateImmutableBinding(exportName, true).
+                let status = CreateImmutableBinding.call(envRec, exportName, true).
+                // 2. Assert: status is not an abrupt completion.
+                HowToDoThis();
+            // iii. Else:
+            } else {
+                // 1. Assert: desc is a Mutable Export Descriptor.
+                HowToDoThis('class Module {}', '8.d.iii.1. Assert: desc is a Mutable Export Descriptor.');
+                // 2. Let status be envRec.CreateMutableBinding(exportName, false).
+                let status = CreateMutableBinding.call(envRec, exportName, false).
+                // 3. Assert: status is not an abrupt completion.
+                HowToDoThis();
+            }
+            // iv. If desc.[[Initialized]] is true, then:
+            if (desc['[[Initialized]]'] === true) {
+                // 1. Call envRec.InitializeBinding(exportName, desc.[[Value]]).
+                InitializeBinding.call(envRec, exportName, desc['[[Value]]']);
+            }
         }
-        // 10. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[Evaluated]]:
-        // evaluated, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[Evaluate]]: evaluate}.
-        let mod = {
-            '[[Realm]]': realm,
-            '[[Environment]]': env,
-            '[[Namespace]]': undefined,
-            '[[Evaluated]]': evaluated,
-            '[[LocalExports]]': localExports,
-            '[[IndirectExports]]': indirectExports,
-            '[[Evaluate]]': evaluate,
-        };
-        // 11. Let ns be ModuleNamespaceCreate(mod, realm, exportNames).
-        let ns = ModuleNamespaceCreate(mod, realm, exportNames);
-        // 12. Set mod.[[Namespace]] to ns.
-        mod['[[Namespace]]'] = ns;
-        // 13. If executor is not undefined, then
-        if (executor !== undefined) {
-            // a. Let mutator be CreateModuleMutator(mod).
-            let mutator = CreateModuleMutator(mod);
-            // b. Let status be ? executor(mutator, ns).
-            executor(mutator, ns);
-        }
-        // 14. Return ns.
-        return ns;
     }
+    // 9. If evaluate is undefined, then let evaluated be true. Otherwise let evaluated be false.
+    let evaluated = (evaluate === undefined ? true : false);
+    // 10. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[Evaluated]]:
+    // evaluated, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[Evaluate]]: evaluate}.
+    let mod = {
+        '[[Realm]]': realm,
+        '[[Environment]]': env,
+        '[[Namespace]]': undefined,
+        '[[Evaluated]]': evaluated,
+        '[[LocalExports]]': localExports,
+        '[[IndirectExports]]': indirectExports,
+        '[[Evaluate]]': evaluate,
+    };
+    // 11. Let ns be ModuleNamespaceCreate(mod, realm, exportNames).
+    // TODO: deviated from spec, `realm` is not needed in this call
+    let ns = ModuleNamespaceCreate(mod, exportNames);
+    // 12. Set mod.[[Namespace]] to ns.
+    mod['[[Namespace]]'] = ns;
+    // 13. If executor is not undefined, then
+    if (executor !== undefined) {
+        // a. Let mutator be CreateModuleMutator(mod).
+        let mutator = CreateModuleMutator(mod);
+        // b. Let status be ? executor(mutator, ns).
+        executor(mutator, ns);
+    }
+    // 14. Return ns.
+    return ns;
 }
+
+// 8.4. Properties of the Module Constructor
+Module.prototype.constructor = Module;
 
 // 8.4.1. Module.evaluate(m)
 Module.evaluate = function (m) {

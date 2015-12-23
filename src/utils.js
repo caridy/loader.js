@@ -47,9 +47,9 @@ export function promiseCall(f, ...args) {
     }
 }
 
-export function assert(value) {
+export function assert(value, message) {
     if (!value) {
-        throw new Error('Loader Spec Error: ' + value);
+        throw new Error('Assertion: ' + (message || 'Loader Spec Error'));
     }
 }
 

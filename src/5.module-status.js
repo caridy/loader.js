@@ -58,7 +58,7 @@ export function GetStage(entry, stage) {
 // 5.1.4. LoadModule(entry, stage)
 export function LoadModule(entry, stage) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert(Object.getOwnPropertyDescriptor(entry, '[[Module]]'));
+    assert('[[Module]]' in entry);
     // 2. Assert: Type(stage) is String.
     assert(typeof stage === 'string');
     // 3. If stage is "fetch", then:
@@ -97,11 +97,13 @@ export function LoadModule(entry, stage) {
         return RequestLink(entry).then(() => undefined);
     }
     // 8. If stage is "ready" or undefined, then:
-    if (stage === "ready") {
+    if (stage === "ready" || stage === undefined) {
         // a. Return the result of transforming RequestReady(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
-        return RequestReady(entry).then((entry) => {
+        // TODO: diverging from the spec on the resolution of RequestReady to be mod instead of entry
+        return RequestReady(entry).then((mod) => {
             // i. Return GetModuleNamespace(entry.[[Module]]).
-            return GetModuleNamespace(entry['[[Module]]']);
+            // TODO: divering from the spec by passing mod instead of entry[[Module]]
+            return GetModuleNamespace(mod);
         });
     }
     // 9. Return a promise rejected with a new RangeError exception.
@@ -131,9 +133,9 @@ export function UpgradeToStage(entry, stage) {
 // 5.2. The ModuleStatus Constructor
 
 // 5.2.1. ModuleStatus(loader, key[, module])
-function ModuleStatusConstructor(loader, key, module) {
+export default function ModuleStatus(loader, key, module) {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
-    HowToDoThis('ModuleStatusConstructor', '1. If NewTarget is undefined, then throw a TypeError exception.');
+    HowToDoThis('ModuleStatus', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. If Type(loader) is not Object, throw a TypeError exception.
     if (typeof loader !== "object") throw new TypeError();
     // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
@@ -189,13 +191,7 @@ function ModuleStatusConstructor(loader, key, module) {
 }
 
 // 5.4. Properties of the ModuleStatus Prototype Object
-
-export default class ModuleStatus {
-
-    // 5.4.1. ModuleStatus.prototype.constructor
-    constructor(loader, key, module) {
-        return ModuleStatusConstructor(loader, key, module);
-    };
+ModuleStatus.prototype = {
 
     // 5.4.2. get ModuleStatus.prototype.stage
     get stage() {
@@ -209,7 +205,7 @@ export default class ModuleStatus {
         let stageEntry = GetCurrentStage(entry);
         // 5. Return stageEntry.[[Stage]].
         return stageEntry['[[Stage]]'];
-    }
+    },
 
     // 5.4.3. get ModuleStatus.prototype.module
     get module() {
@@ -221,7 +217,7 @@ export default class ModuleStatus {
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Return entry.[[Module]].
         return entry['[[Module]]'];
-    }
+    },
 
     // 5.4.4. get ModuleStatus.prototype.error
     get error() {
@@ -233,7 +229,7 @@ export default class ModuleStatus {
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
         // 4. Return entry.[[Error]].
         return entry['[[Error]]'];
-    }
+    },
 
     // 5.4.5. get ModuleStatus.prototype.dependencies
     get dependencies() {
@@ -270,7 +266,7 @@ export default class ModuleStatus {
         }
         // 7. Return array.
         return array;
-    }
+    },
 
     // 5.4.6. ModuleStatus.prototype.load(stage)
     load(stage) {
@@ -300,7 +296,7 @@ export default class ModuleStatus {
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
         // 8. Return LoadModule(entry, stageValue).
         return LoadModule(entry, stageValue);
-    }
+    },
 
     // 5.4.7. ModuleStatus.prototype.result(stage)
     result(stage) {
@@ -344,7 +340,7 @@ export default class ModuleStatus {
         if (stageEntry['[[Result]]'] === undefined) return Promise.resolve(undefined);
         // 11. Return the result of transforming stageEntry.[[Result]] with a new pass-through promise.
         return PassThroughPromise(stageEntry['[[Result]]']);
-    }
+    },
 
     // 5.4.8. ModuleStatus.prototype.resolve(stage, result)
     resolve(stage, result) {
@@ -393,7 +389,7 @@ export default class ModuleStatus {
         });
         // 9. Return p0.
         return p0;
-    }
+    },
 
     // 5.4.9. ModuleStatus.prototype.reject(stage, error)
     reject(stage, error) {
@@ -444,4 +440,7 @@ export default class ModuleStatus {
         return p0;
     }
 
-}
+};
+
+// 5.4.1. ModuleStatus.prototype.constructor
+ModuleStatus.prototype.constructor = ModuleStatus;

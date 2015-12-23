@@ -21,8 +21,8 @@ import {
     HowToDoThis
 } from "./utils.js";
 
-// 3.1.1. LoaderConstructor()
-function LoaderConstructor() {
+// 3.1.1. Loader()
+export default function Loader() {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
     HowToDoThis('LoaderConstructor', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%LoaderPrototype%", «[[Realm]], [[Registry]]»).
@@ -33,15 +33,11 @@ function LoaderConstructor() {
     return O;
 }
 
-export default class Loader{
-
-    // 3.3.1. Loader.prototype.constructor
-    constructor() {
-        return LoaderConstructor();
-    }
+// 3.3. Properties of the Loader Prototype Object
+Loader.prototype = {
 
     // 3.3.2. Loader.prototype.import(name[, referrer])
-    ['import'](name, referrer) {
+    import(name, referrer) {
         // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
@@ -55,7 +51,7 @@ export default class Loader{
             // b. Return LoadModule(entry, "ready").
             return LoadModule(entry, "ready");
         });
-    }
+    },
 
     // 3.3.3. Loader.prototype.resolve(name[, referrer])
     resolve(name, referrer) {
@@ -67,7 +63,7 @@ export default class Loader{
         if (!loader['[[Registry]]']) throw new TypeError();
         // 4. Return Resolve(loader, name, referrer).
         return Resolve(loader, name, referrer);
-    }
+    },
 
     // 3.3.4. Loader.prototype.load(name[, referrer[, stage]])
     load(name, referrer, stage) {
@@ -95,7 +91,7 @@ export default class Loader{
             // b. Return LoadModule(entry, stageValue).
             return LoadModule(entry, stageValue);
         });
-    }
+    },
 
     // 3.3.5. get Loader.prototype.registry
     get registry() {
@@ -106,14 +102,17 @@ export default class Loader{
         if (!loader['[[Registry]]']) throw new TypeError();
         // 2. Return loader.[[Registry]].
         return loader['[[Registry]]'];
-    }
+    },
 
     // 3.3.6. Loader.prototype [ @@toStringTag ]
     [ Symbol.toStringTag ]() {
         return "Object";
     }
 
-}
+};
+
+// 3.3.1. Loader.prototype.constructor
+Loader.prototype.constructor = Loader;
 
 /* 2.1 Well-Known Symbols */
 Loader.resolve     = Symbol("@@resolve");
