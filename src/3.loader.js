@@ -1,4 +1,8 @@
 import {
+    PassThroughPromise,
+} from './2.conventions.js';
+
+import {
     CreateRegistry,
 } from "./4.registry.js";
 
@@ -100,8 +104,8 @@ Loader.prototype = {
         if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         if (!loader['[[Registry]]']) throw new TypeError();
-        // 2. Return loader.[[Registry]].
-        return loader['[[Registry]]'];
+        // 2. Return the result of transforming Resolve(loader, name, referrer) with a new pass-through promise.
+        return PassThroughPromise(loader['[[Registry]]']);
     },
 
     // 3.3.6. Loader.prototype [ @@toStringTag ]

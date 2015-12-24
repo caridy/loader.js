@@ -71,11 +71,11 @@ export function ResolveExport(exportName, resolveStack, exportStarStack) {
             '[[bindingName]]': exportName
         };
     }
-    // 7. Let exports be module.[[IndirectExports]].
-    let exports = module['[[IndirectExports]]'];
-    // 8. Let pair be the pair in exports such that pair.[[Key]] is equal to exportName.
-    let pair = exports.find((pair) => pair['[[Key]]'] === exportName);
-    // 9. If pair is defined, then return pair.[[Value]].
+    // 7. Let indirectExports be module.[[IndirectExports]].
+    let indirectExports = module['[[IndirectExports]]'];
+    // 8. Let pair be the pair in indirectExports such that pair.[[Key]] is equal to exportName.
+    let pair = indirectExports.find((pair) => pair['[[Key]]'] === exportName);
+    // 9. If pair is defined, return pair.[[Value]].
     if (pair) return pair['[[Value]]'];
     // 10. Return null.
     return null;
@@ -187,7 +187,7 @@ export default function Module(descriptors, executor, evaluate) {
     if (executor !== undefined) {
         // a. Let mutator be CreateModuleMutator(mod).
         let mutator = CreateModuleMutator(mod);
-        // b. Let status be ? executor(mutator, ns).
+        // b. Perform ? executor(mutator, ns).
         executor(mutator, ns);
     }
     // 14. Return ns.

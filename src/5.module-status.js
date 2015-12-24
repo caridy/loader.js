@@ -8,6 +8,10 @@ import {
     RequestReady,
 } from './6.loading.js';
 
+import {
+    PassThroughPromise,
+} from './2.conventions.js';
+
 // TODO: remove helpers
 import {
     HowToDoThis,
@@ -48,7 +52,7 @@ export function GetStage(entry, stage) {
     let stages = entry['[[Pipeline]]'];
     // 4. For each element entry of stages, do
     for (var stageEntry of stages) {
-        // a. If stageEntry.[[Stage]] is equal to stage, then return entry.
+        // a. If stageEntry.[[Stage]] is equal to stage, return entry.
         if (stageEntry['[[Stage]]'] === stage) return entry;
     }
     // 7. Return undefined.
@@ -61,52 +65,39 @@ export function LoadModule(entry, stage) {
     assert('[[Module]]' in entry, 'Type(stage) is String.');
     // 2. Assert: Type(stage) is String.
     assert(typeof stage === 'string', 'Type(stage) is String.');
-    // 3. If stage is "fetch", then:
+    // 3. Assert: stage is a valid stage value.
+    assert(['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready'].indexOf(stage) !== -1, 'stage is a valid stage value.');
+    // 4. If stage is "fetch", then:
     if (stage === "fetch") {
         // a. Return the result of transforming RequestFetch(entry) with a new pass-through promise.
         return PassThroughPromise(RequestFetch(entry));
     }
-    // 4. If stage is "translate", then:
+    // 5. If stage is "translate", then:
     if (stage === "translate") {
         // Return the result of transforming RequestTranslate(entry) with a new pass-through promise.
         return PassThroughPromise(RequestTranslate(entry));
     }
-    // 5. If stage is "instantiate", then:
+    // 6. If stage is "instantiate", then:
     if (stage === "instantiate") {
-        // a. Return the result of transforming RequestInstantiate(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
-        return RequestInstantiate(entry).then((entry) => {
-            // i. If entry.[[Module]] is a Function object, return entry.[[Module]].
-            if (typeof entry['[[Module]]'] === 'function') return entry['[[Module]]'];
-            // ii. Return undefined.
-            return undefined;
-        });
+        // a. Return the result of transforming RequestInstantiate(entry) with a new pass-through promise.
+        return PassThroughPromise(RequestInstantiate(entry));
     }
-    // 6. If stage is "satisfy", then:
+    // 7. If stage is "satisfy", then:
     if (stage === "satisfy") {
-        // a. Return the result of transforming RequestSatisfy(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
-        return RequestSatisfy(entry).then((entry) => {
-            // i. If entry.[[Module]] is a Function object, return entry.[[Module]].
-            if (typeof entry['[[Module]]'] === 'function') return entry['[[Module]]'];
-            // ii. Return undefined.
-            return undefined;
-        });
+        // a. Return the result of transforming RequestSatisfy(entry) with a new pass-through promise.
+        return PassThroughPromise(RequestSatisfy(entry));
     }
-    // 7. If stage is "link", then:
+    // 8. If stage is "link", then:
     if (stage === "link") {
-        // a. Return the result of transforming RequestLink(entry) with a fulfillment handler that returns undefined.
-        return RequestLink(entry).then(() => undefined);
+        // a. Return the result of transforming RequestLink(entry) with a new pass-through promise.
+        return PassThroughPromise(RequestLink(entry));
     }
-    // 8. If stage is "ready" or undefined, then:
-    if (stage === "ready" || stage === undefined) {
-        // a. Return the result of transforming RequestReady(entry) with a fulfillment handler that, when called with argument entry, runs the following steps:
-        // TODO: diverging from the spec on the resolution of RequestReady to be mod instead of entry
-        return RequestReady(entry).then((mod) => {
-            // i. Return GetModuleNamespace(entry.[[Module]]).
-            // TODO: divering from the spec by passing mod instead of entry[[Module]]
-            return GetModuleNamespace(mod);
-        });
+    // 9. If stage is "ready", then:
+    if (stage === "ready") {
+        // a. Return the result of transforming RequestReady(entry) with a new pass-through promise.
+        return PassThroughPromise(RequestReady(entry));
     }
-    // 9. Return a promise rejected with a new RangeError exception.
+    // 10. Return a promise rejected with a new RangeError exception.
     return Promise.reject(new RangeError('stage'));
 }
 
@@ -184,8 +175,8 @@ export default function ModuleStatus(loader, key, module) {
     O['[[Metadata]]'] = undefined;
     // 16. Set O’s [[Dependencies]] internal slot to undefined.
     O['[[Dependencies]]'] = undefined;
-    // 17. Set O’s [[Error]] internal slot to nothing.
-    O['[[Error]]'] = undefined;
+    // 17. Set O’s [[Error]] internal slot to false.
+    O['[[Error]]'] = false;
     // 18. Return O.
     return O;
 }
@@ -249,17 +240,17 @@ ModuleStatus.prototype = {
             let O = ObjectCreate(Object.prototype);
             // b. Let requestNameDesc be the PropertyDescriptor{[[Value]]: pair.[[RequestName]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
             let requestNameDesc = {value: pair['[[RequestName]]'], writable: false, enumerable: true, configurable: false};
-            // c. Let requestNameStatus be ? DefinePropertyOrThrow(O, "requestName", requestNameDesc).
-            let requestNameStatus = Object.defineProperty(O, "requestName", requestNameDesc);
+            // c. Perform ? DefinePropertyOrThrow(O, "requestName", requestNameDesc).
+            Object.defineProperty(O, "requestName", requestNameDesc);
             // d. Let keyDesc be the PropertyDescriptor{[[Value]]: pair.[[Key]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
             let keyDesc = {value: pair['[[Key]]'], writable: false, enumerable: true, configurable: false};
-            // e. Let keyStatus be ? DefinePropertyOrThrow(O, "key", keyDesc).
-            let keyStatus = Object.defineProperty(O, "key", keyDesc);
+            // e. Perform ? DefinePropertyOrThrow(O, "key", keyDesc).
+            Object.defineProperty(O, "key", keyDesc);
             // f. Let moduleStatusDesc be the PropertyDescriptor{[[Value]]: pair.[[ModuleStatus]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
             let moduleStatusDesc = {value: pair['[[ModuleStatus]]'], writable: false, enumerable: true, configurable: false};
-            // g. Let moduleStatus be ? DefinePropertyOrThrow(O, "entry", moduleStatusDesc).
-            let moduleStatus = Object.defineProperty(O, "entry", moduleStatusDesc);
-            // h. Let status be ? CreateDataProperty(array, ? ToString(n), O).
+            // g. Perform ? DefinePropertyOrThrow(O, "entry", moduleStatusDesc).
+            Object.defineProperty(O, "entry", moduleStatusDesc);
+            // Perform ? CreateDataProperty(array, ? ToString(n), O).
             array[ToString(n)] = O;
             // i. Increment n by 1.
             n += 1;
@@ -382,13 +373,16 @@ ModuleStatus.prototype = {
                 // i. Fulfill stageEntry.[[Result]] with value.
                 HowToDoThis('ModuleStatus.prototype.resolve', '8.d.i. Fulfill stageEntry.[[Result]] with value.');
             }
-            // e. UpgradeToStage(entry, stageValue).
+            // e. Perform UpgradeToStage(entry, stageValue).
             UpgradeToStage(entry, stageValue);
-            // f. Return value.
-            return value;
         });
-        // 9. Return p0.
-        return p0;
+        // 9. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
+        p1.catch(() => {
+            // a. Set entry.[[Error]] to true.
+            entry['[[Error]]'] = true;
+        });
+        // 10. Return p1.
+        return p1;
     },
 
     // 5.4.9. ModuleStatus.prototype.reject(stage, error)
@@ -431,13 +425,16 @@ ModuleStatus.prototype = {
                 // i. Reject stageEntry.[[Result]] with value.
                 HowToDoThis('ModuleStatus.prototype.reject', '8.d.i. Reject stageEntry.[[Result]] with value.');
             }
-            // e. UpgradeToStage(entry, stageValue).
+            // e. Perform UpgradeToStage(entry, stageValue).
             UpgradeToStage(entry, stageValue);
-            // f. Return value.
-            return value;
         });
-        // 9. Return p0.
-        return p0;
+        // 9. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
+        p1.catch(() => {
+            // a. Set entry.[[Error]] to true.
+            entry['[[Error]]'] = true;
+        });
+        // 10. Return p1.
+        return p1;
     }
 
 };

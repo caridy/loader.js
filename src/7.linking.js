@@ -59,7 +59,7 @@ export function Link(root) {
             let m = f();
             // iii. Set dep.[[Module]] to m.
             dep['[[Module]]'] = m;
-            // iv. UpgradeToStage(dep, "ready").
+            // iv. Perform UpgradeToStage(dep, "ready").
             UpgradeToStage(dep, 'ready');
         }
     }
@@ -75,9 +75,9 @@ export function Link(root) {
             let module = dep['[[Module]]'];
             // ii. Assert: module is a Module Record.
             assert('[[Namespace]]' in module, 'module is a Module Record');
-            // iii. Let status be ? module.ModuleDeclarationInstantiation().
+            // iii. Perform ? module.ModuleDeclarationInstantiation().
             ModuleDeclarationInstantiation.call(module);
-            // iv. UpgradeToStage(dep, "ready").
+            // iv. Perform UpgradeToStage(dep, "ready").
             UpgradeToStage(dep, 'ready');
         }
     }
@@ -103,7 +103,7 @@ export function ComputeDependencyGraph(entry, result) {
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Assert: result must be a List.
     assert(Array.isArray(result), 'result must be a List.');
-    // 3. If entry is already in result, then return undefined.
+    // 3. If entry is already in result, return undefined.
     if (result.indexOf(entry) !== -1) return undefined;
     // 4. Append entry to result.
     result.push(entry);
