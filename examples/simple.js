@@ -46,6 +46,8 @@ loader[Reflect.Loader.instantiate] = function(entry) {
         }, function (mutator) {
             console.log('mutating instance of foo created in user-land');
             liveBindings = mutator;
+            mutator.x = 24; // testing the mutator setter
+            // mutator.PI = 1; // this should throw: Cannot redefine property: PI
         }, function () {
             console.log('evaluating instance of foo created in user-land');
         });
@@ -56,6 +58,9 @@ loader[Reflect.Loader.instantiate] = function(entry) {
 loader.import('foo').then(function (mod) {
     console.log('done importing module foo from user-land');
     console.log(mod);
+    console.log('value of x: ', mod.x);
+    console.log('value of y: ', mod.y);
+    console.log('value of PI: ', mod.PI);
 }).catch(function (err) {
     console.error(err.stack || err);
 });

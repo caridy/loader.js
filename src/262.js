@@ -30,6 +30,12 @@ export function ToString(value) {
     return typeof value === 'string' ? value : value + '';
 }
 
+// 7.1.2 ToBoolean ( argument )
+export function ToBoolean(value) {
+    // relying on the underlaying implementation
+    return !!value;
+}
+
 // 7.3.9 GetMethod (V, P)
 export function GetMethod(v, p) {
     let func = v[p];
@@ -132,6 +138,8 @@ export function NewModuleEnvironment (E) {
     let env = Object.create(null);
     // 2. Let envRec be a new module Environment Record containing no bindings.
     let envRec = Object.create(null);
+    // TODO: diverging from spec to track initialized bindings
+    envRec['[[$InitializeBinding]]'] = [];
     // 3. Set env's EnvironmentRecord to be envRec.
     env['[[EnvironmentRecord]]'] = envRec;
     // 4. Set the outer lexical environment reference of env to E.
@@ -184,6 +192,15 @@ export function ModuleNamespaceCreate (module, exports) {
     M['[[Exports]]'] = exports;
 
     // 8. Create own properties of M corresponding to the definitions in 26.3.
+    // TODO: diverging from spec since this is not very clear in the spec, it is more like freestyle
+    let envRec = module['[[Environment]]']['[[EnvironmentRecord]]'];
+    exports.forEach((name) => {
+        Object.defineProperty(M, name, {
+            get: () => envRec[name],
+            enumerable: true,
+            configurable: false
+        });
+    });
     // - 262 spec expando:
     {
         // http://tc39.github.io/ecma262/#sec-module-namespace-objects
@@ -219,9 +236,64 @@ export function CreateMutableBinding (N, D) {
     // 2. Assert: envRec does not already have a binding for N.
     assert(Object.getOwnPropertyDescriptor(envRec, N) === undefined, 'envRec does not already have a binding for N.');
     // 3. Create a mutable binding in envRec for N and record that it is uninitialized. If D is true record that the newly created binding may be deleted by a subsequent DeleteBinding call.
+    // TODO: divering from spec since we don't really care about "DeleteBinding"
     Object.defineProperty(envRec, N, {
-        configurable: true
+        configurable: true,
+        enumerable: true,
+    });
+    // IMPLEMENTATION: diverging from spec to mark binding as immutable for the initialization
+    envRec['[[$MutableBinding]]'].push(N);
+    // 4. Return NormalCompletion(empty).
+    return;
+}
+
+// 8.1.1.1.3 CreateImmutableBinding (N, S)
+export function CreateImmutableBinding (N, S) {
+    // 1. Let envRec be the declarative Environment Record for which the method was invoked.
+    let envRec = this;
+    // 2. Assert: envRec does not already have a binding for N.
+    assert(Object.getOwnPropertyDescriptor(envRec, N) === undefined, 'envRec does not already have a binding for N.');
+    // 3. Create an immutable binding in envRec for N and record that it is uninitialized. If S is true record that the newly created binding is a strict binding.
+    // TODO: diverging from spec since all bindings are strict bindings
+    Object.defineProperty(envRec, N, {
+        configurable: true,
+        enumerable: true,
     });
     // 4. Return NormalCompletion(empty).
     return;
+}
+
+// 8.1.1.1.4 InitializeBinding (N, V)
+export function InitializeBinding (N, V) {
+    // 1. Let envRec be the declarative Environment Record for which the method was invoked.
+    let envRec = this;
+    // 2. Assert: envRec must have an uninitialized binding for N.
+    assert(Object.getOwnPropertyDescriptor(envRec, N) !== undefined && envRec['[[$InitializeBinding]]'].indexOf(N) === -1, 'envRec must have an uninitialized binding for N.');
+    // 3. Set the bound value for N in envRec to V.
+    Object.defineProperty(envRec, N, {
+        value: V,
+        // IMPLEMENTATION: only after the binding is initialized we lock it down if it is not mutable
+        configurable: envRec['[[$MutableBinding]]'].indexOf(N) !== -1,
+        enumerable: true,
+    });
+    // 4. Record that the binding for N in envRec has been initialized.
+    envRec['[[$InitializeBinding]]'].push(N);
+    // 5. Return NormalCompletion(empty).
+    return;
+}
+
+// 9.4.4.7.1 MakeArgGetter (name, env)
+export function MakeArgGetter (name, env) {
+    return function () {
+        return env[name];
+    };
+}
+
+// 9.4.4.7.2 MakeArgSetter (name, env)
+export function MakeArgSetter (name, env) {
+    return function (value) {
+        Object.defineProperty(env, name, {
+            value: value,
+        });
+    };
 }

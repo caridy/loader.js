@@ -2,25 +2,157 @@ import {
     NewModuleEnvironment,
     ModuleNamespaceCreate,
     CreateMutableBinding,
+    CreateImmutableBinding,
+    InitializeBinding,
+    MakeArgGetter,
+    MakeArgSetter,
+    ToBoolean,
+    ToString,
 } from './262.js';
 
 // TODO: remove helpers
 import {
     HowToDoThis,
+    assert,
 } from "./utils.js";
 
 // 8.2.1. ParseExportsDescriptors(obj)
 export function ParseExportsDescriptors(obj) {
-    console.log('TODO: Missing implementation for 8.2.1. ParseExportsDescriptors(obj)');
-    return [];
-    // TODO: throw new Error('TODO');
+    // 1. If Type(obj) is not Object, throw a TypeError exception.
+    if (typeof obj !== 'object') throw new TypeError();
+    // 2. Let props be ? ToObject(Obj).
+    let props = obj;
+    // 3. Let keys be ? props.[[OwnPropertyKeys]]().
+    let keys = Object.getOwnPropertyNames(props);
+    // 4. Let descriptors be an empty List.
+    let descriptors = [];
+
+    let desc; // divering to escape the block binding...
+    // 5. Repeat for each element nextKey of keys in List order,
+    for (let nextKey of keys) {
+        // a. Let propDesc be ? props.[[GetOwnProperty]](nextKey).
+        let propDesc = Object.getOwnPropertyDescriptor(props, nextKey);
+        // b. If propDesc is not undefined and propDesc.[[Enumerable]] is true, then
+        if (propDesc !== undefined && propDesc.enumerable === true) {
+            // i. Let descObj be ? Get(props, nextKey).
+            let descObj = props[nextKey];
+            // ii. Let hasModule be ? HasProperty(descObj, "module").
+            let hasModule = ("module" in descObj);
+            // ii. If hasModule is true, then
+            if (hasModule === true) {
+                // 1. Let module be ? Get(descObj, "module").
+                let module = descObj.module;
+                // 2. If module is not a Module Record, throw a TypeError exception.
+                if (!('[[Namespace]]' in module)) throw new TypeError();
+                // 3. Let importName be ToString(? Get(descObj, "import")).
+                let importName = ToString(descObj.import);
+                // 4. Let desc be a new Indirect Export Descriptor Record {[[Name]]: nextKey, [[Module]]: module, [[Import]]: importName}.
+                desc = {
+                    '[[IndirectExportDescriptor]]': true,
+                    '[[Name]]': nextKey,
+                    '[[Module]]': module,
+                    '[[Import]]': importName,
+                };
+            }
+            // iv. Else,
+            else {
+                // 1. Let hasValue be ? HasProperty(descObj, "value").
+                let hasValue = ("value" in descObj);
+                // 2. If hasValue is true, let value be ? Get(descObj, "value").
+                let value = (hasValue === true ? descObj.value : undefined);
+                // 3. Let hasConst be ? HasProperty(descObj, "const").
+                let hasConst = ("const" in descObj);
+                // 4. If hasConst is true, let isConst be ToBoolean(? Get(descObj, "const")).
+                let isConst = (hasConst === true ? ToBoolean(descObj.const) : undefined);
+                // 5. If isConst is true, then
+                if (isConst === true) {
+                    // a. If hasValue is true, then
+                    if (hasValue === true) {
+                        // i. Let desc be a new Immutable Export Descriptor Record {[[Name]]: nextKey, [[Value]]: value, [[Initialized]]: true}.
+                        desc = {
+                            '[[ImmutableExportDescriptor]]': true,
+                            '[[Name]]': nextKey,
+                            '[[Value]]': value,
+                            '[[Initialized]]': true,
+                        };
+                    }
+                    // b. Else,
+                    else {
+                        // i. Let desc be a new Immutable Export Descriptor Record {[[Name]]: nextKey, [[Value]]: undefined, [[Initialized]]: false}.
+                        desc = {
+                            '[[ImmutableExportDescriptor]]': true,
+                            '[[Name]]': nextKey,
+                            '[[Value]]': undefined,
+                            '[[Initialized]]': false,
+                        };
+                    }
+                }
+                // 6. Else,
+                else {
+                    // a. If hasValue is true, then
+                    if (hasValue === true) {
+                        // i. Let desc be a new Mutable Export Descriptor Record {[[Name]]: nextKey, [[Value]]: value, [[Initialized]]: true}.
+                        desc = {
+                            '[[MutableExportDescriptor]]': true,
+                            '[[Name]]': nextKey,
+                            '[[Value]]': value,
+                            '[[Initialized]]': true,
+                        };
+                    }
+                    // b. Else,
+                    else {
+                        // i. Let desc be a new Mutable Export Descriptor Record {[[Name]]: nextKey, [[Value]]: undefined, [[Initialized]]: false}.
+                        desc = {
+                            '[[MutableExportDescriptor]]': true,
+                            '[[Name]]': nextKey,
+                            '[[Value]]': undefined,
+                            '[[Initialized]]': false,
+                        };
+                    }
+                }
+            }
+            // v. Append desc to the end of descriptors.
+            descriptors.push(desc);
+        }
+    }
+    // 6. Return descriptors.
+    return descriptors;
 }
 
 // 8.2.2. CreateModuleMutator(module)
 export function CreateModuleMutator(module) {
-    console.log('TODO: Missing implementation for 8.2.2. CreateModuleMutator(module)');
-    return module;
-    // TODO: throw new Error('TODO');
+    // 1. Assert: Assert: module is a Reflective Module Records.
+    assert('[[Namespace]]' in module, 'module is a Reflective Module Records.');
+    // 2. Let mutator be ObjectCreate(%ObjectPrototype%).
+    let mutator = Object.create(null);
+    // 3. Let env be module.[[Environment]].
+    let env = module['[[Environment]]'];
+    // 4. Let envRec be env’s environment record.
+    let envRec = env['[[EnvironmentRecord]]'];
+    // 5. For each name in module.[[IndirectExports]], do:
+    for (let name of module['[[IndirectExports]]']) {
+        // a. Let g be MakeArgGetter(name, envRec).
+        let g = MakeArgGetter(name, envRec);
+        // b. Let indirectExportDesc be the PropertyDescriptor{[[Get]]: g, [[Set]]: %ThrowTypeError%, [[Enumerable]]: true, [[Configurable]]: false}.
+        let indirectExportDesc = {get: g, set: () => { throw new TypeError(); }, enumerable: true, configurable: false};
+        // c. Perform ? DefinePropertyOrThrow(mutator, name, indirectExportDesc).
+        Object.defineProperty(mutator, name, indirectExportDesc);
+    }
+    // 6. For each name in module.[[LocalExports]], do:
+    for (let name of module['[[LocalExports]]']) {
+        // a. Assert: mutator does not already have a binding for name.
+        assert(Object.getOwnPropertyDescriptor(mutator, name) === undefined, 'mutator does not already have a binding for name.');
+        // b. Let g be MakeArgGetter(name, envRec).
+        let g = MakeArgGetter(name, envRec);
+        // c. Let p be MakeArgSetter(name, envRec).
+        let p = MakeArgSetter(name, envRec);
+        // d. Let localExportDesc be the PropertyDescriptor{[[Get]]: g, [[Set]]: p, [[Enumerable]]: true, [[Configurable]]: false}.
+        let localExportDesc = {get: g, set: p, enumerable: true, configurable: false};
+        // e. Perform ? DefinePropertyOrThrow(mutator, name, localExportDesc).
+        Object.defineProperty(mutator, name, localExportDesc);
+    }
+    // 7. Return mutator.
+    return mutator;
 }
 
 // 8.2.3. GetExportNames(exportStarStack)
@@ -48,7 +180,7 @@ export function ResolveExport(exportName, resolveStack, exportStarStack) {
     // 1. Let module be this Reflective Module Record.
     let module = this;
     // 2. If resolveStack contains a record r such that r.[[module]] is equal to module and r.[[exportName]] is equal to exportName, then
-    if (resolveStack.some((r) => r['[[module]]'] === module && r['[[exportName]]'] === exportName)) {
+    if (resolveStack.find((r) => r['[[module]]'] === module && r['[[exportName]]'] === exportName)) {
         // a. Assert: this is a circular import request.
         HowToDoThis('ResolveExport', '2.a. Assert: this is a circular import request.');
         // b. Throw a SyntaxError exception.
@@ -115,9 +247,12 @@ export default function Module(descriptors, executor, evaluate) {
     // 6. Let exportNames be a new empty List.
     let exportNames = [];
     // 7. Let envRec be env’s environment record.
-    let envRec = Object.create(null);
+    let envRec = env['[[EnvironmentRecord]]'];
+    // IMPLEMENTATION: diverging from spec to track initialized and mutable bindings
+    envRec['[[$InitializeBinding]]'] = [];
+    envRec['[[$MutableBinding]]'] = [];
     // 8. For each desc in exportDescriptors, do:
-    for (var desc in exportDescriptors) {
+    for (var desc of exportDescriptors) {
         // a. Let exportName be desc.[[Name]].
         let exportName = desc['[[Name]]'];
         // b. Append exportName to exportNames.
@@ -145,18 +280,14 @@ export default function Module(descriptors, executor, evaluate) {
             localExports.push(exportName);
             // ii. If desc is an Immutable Export Descriptor, then:
             if (desc['[[ImmutableExportDescriptor]]']) {
-                // 1. Let status be envRec.CreateImmutableBinding(exportName, true).
-                let status = CreateImmutableBinding.call(envRec, exportName, true).
-                // 2. Assert: status is not an abrupt completion.
-                HowToDoThis();
+                // 1. Perform ? envRec.CreateImmutableBinding(exportName, true).
+                CreateImmutableBinding.call(envRec, exportName, true);
             // iii. Else:
             } else {
                 // 1. Assert: desc is a Mutable Export Descriptor.
-                HowToDoThis('class Module {}', '8.d.iii.1. Assert: desc is a Mutable Export Descriptor.');
-                // 2. Let status be envRec.CreateMutableBinding(exportName, false).
-                let status = CreateMutableBinding.call(envRec, exportName, false).
-                // 3. Assert: status is not an abrupt completion.
-                HowToDoThis();
+                assert('[[MutableExportDescriptor]]' in desc, 'desc is a Mutable Export Descriptor.');
+                // 2. Perform ? envRec.CreateMutableBinding(exportName, false).
+                CreateMutableBinding.call(envRec, exportName, false);
             }
             // iv. If desc.[[Initialized]] is true, then:
             if (desc['[[Initialized]]'] === true) {

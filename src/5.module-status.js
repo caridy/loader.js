@@ -37,7 +37,7 @@ export function IsValidStageValue(stage) {
     // 1. Assert: Type(stage) is String.
     assert(typeof stage === 'string', 'Type(stage) is String.');
     // 2. If stage is "fetch", "translate", "instantiate", "satisfy", "link" or "ready", return true.
-    if (stage in ['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready']) return true;
+    if (['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready'].indexOf(stage) !== -1) return true;
     // 3. Else return false.
     else return false;
 }
@@ -235,7 +235,7 @@ ModuleStatus.prototype = {
         // 5. Let n be 0.
         let n = 0;
         // 6. For each pair in entry.[[Dependencies]], do:
-        for (var pair in entry['[[Dependencies]]']) {
+        for (var pair of entry['[[Dependencies]]']) {
             // a. Let O be ObjectCreate(%ObjectPrototype%).
             let O = ObjectCreate(Object.prototype);
             // b. Let requestNameDesc be the PropertyDescriptor{[[Value]]: pair.[[RequestName]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
