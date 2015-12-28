@@ -274,7 +274,6 @@ export function InitializeBinding (N, V) {
         value: V,
         // IMPLEMENTATION: only after the binding is initialized we lock it down if it is not mutable
         configurable: envRec['[[$MutableBinding]]'].indexOf(N) !== -1,
-        enumerable: true,
     });
     // 4. Record that the binding for N in envRec has been initialized.
     envRec['[[$InitializeBinding]]'].push(N);
@@ -292,8 +291,13 @@ export function MakeArgGetter (name, env) {
 // 9.4.4.7.2 MakeArgSetter (name, env)
 export function MakeArgSetter (name, env) {
     return function (value) {
-        Object.defineProperty(env, name, {
-            value: value,
-        });
+        // IMPLEMENTATION: diverging considerable from spec to track down the initialization of the bindings
+        if (env['[[$MutableBinding]]'].indexOf(name) === -1 && env['[[$InitializeBinding]]'].indexOf(name) === -1) {
+            InitializeBinding.call(env, name, value);
+        } else {
+            Object.defineProperty(env, name, {
+                value: value,
+            });
+        }
     };
 }

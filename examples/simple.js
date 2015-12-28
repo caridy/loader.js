@@ -50,6 +50,11 @@ loader[Reflect.Loader.instantiate] = function(entry) {
             // mutator.PI = 1; // this should throw: Cannot redefine property: PI
         }, function () {
             console.log('evaluating instance of foo created in user-land');
+            liveBindings.z = function () {
+                return 'something';
+            };
+            liveBindings.TAU = 3;
+            // liveBindings.TAU = 2; // this second attempt should throw: Cannot redefine property: TAU
         });
         fulfill(mod);
     });
@@ -60,7 +65,9 @@ loader.import('foo').then(function (mod) {
     console.log(mod);
     console.log('value of x: ', mod.x);
     console.log('value of y: ', mod.y);
+    console.log('value of z: ', mod.z);
     console.log('value of PI: ', mod.PI);
+    console.log('value of TAU: ', mod.TAU);
 }).catch(function (err) {
     console.error(err.stack || err);
 });
