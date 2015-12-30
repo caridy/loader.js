@@ -77,7 +77,7 @@ export function Resolve(loader, name, referrer) {
     // 1. Let hook be GetMethod(loader, @@resolve).
     let hook = GetMethod(loader, Loader.resolve);
     // 2. Return the result of promise-calling hook(name, referrer).
-    return hook(name, referrer);
+    return promiseCall(hook, name, referrer);
 }
 
 // 6.1.3. ExtractDependencies(entry, optionalInstance, source)

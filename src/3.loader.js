@@ -99,13 +99,14 @@ Loader.prototype = {
 
     // 3.3.5. get Loader.prototype.registry
     get registry() {
+        // 1. Let loader be this value.
         let loader = this;
         // 2. If Type(loader) is not Object, throw a TypeError exception.
         if (typeof loader !== 'object') throw new TypeError();
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         if (!loader['[[Registry]]']) throw new TypeError();
-        // 2. Return the result of transforming Resolve(loader, name, referrer) with a new pass-through promise.
-        return PassThroughPromise(loader['[[Registry]]']);
+        // 4. Return loader.[[Registry]].
+        return loader['[[Registry]]'];
     },
 
     // 3.3.6. Loader.prototype [ @@toStringTag ]

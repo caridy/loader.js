@@ -19,7 +19,7 @@ export function OrdinaryCreateFromConstructor (constructor, intrinsicDefaultProt
     let proto = constructor.prototype;
     // 3. Return ObjectCreate(proto, internalSlotsList).
     return Object.create(proto, internalSlotsList.reduce((descriptors, internalSlot) => {
-        descriptors[internalSlot] = { writable: true, configurable: false, value: undefined };
+        descriptors[internalSlot] = { writable: true, configurable: false, value: undefined, enumerable: false };
         return descriptors;
     }, {}));
 }
@@ -197,6 +197,7 @@ export function ModuleNamespaceCreate (module, exports) {
     exports.forEach((name) => {
         Object.defineProperty(M, name, {
             get: () => envRec[name],
+            set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
             enumerable: true,
             configurable: false
         });

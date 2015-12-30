@@ -40,17 +40,17 @@ export function ParseExportsDescriptors(obj) {
             let hasModule = ("module" in descObj);
             // ii. If hasModule is true, then
             if (hasModule === true) {
-                // 1. Let module be ? Get(descObj, "module").
-                let module = descObj.module;
-                // 2. If module is not a Module Record, throw a TypeError exception.
-                if (!('[[Namespace]]' in module)) throw new TypeError();
+                // 1. Let ns be ? Get(descObj, "module").
+                let ns = descObj.module;
+                // 2. If ns is not a module namespace exotic object, throw a TypeError exception.
+                if (!('[[Module]]' in ns)) throw new TypeError();
                 // 3. Let importName be ToString(? Get(descObj, "import")).
                 let importName = ToString(descObj.import);
-                // 4. Let desc be a new Indirect Export Descriptor Record {[[Name]]: nextKey, [[Module]]: module, [[Import]]: importName}.
+                // 4. Let desc be a new Indirect Export Descriptor Record {[[Name]]: nextKey, [[Module]]: ns.[[Module]], [[Import]]: importName}.
                 desc = {
                     '[[IndirectExportDescriptor]]': true,
                     '[[Name]]': nextKey,
-                    '[[Module]]': module,
+                    '[[Module]]': ns['[[Module]]'],
                     '[[Import]]': importName,
                 };
             }
