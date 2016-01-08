@@ -6,6 +6,7 @@ import {
     InitializeBinding,
     MakeArgGetter,
     MakeArgSetter,
+    IsCallable,
     ToBoolean,
     ToString,
 } from './262.js';
@@ -18,8 +19,8 @@ import {
 
 // 8.2.1. ParseExportsDescriptors(obj)
 export function ParseExportsDescriptors(obj) {
-    // 1. If Type(obj) is not Object, throw a TypeError exception.
-    if (typeof obj !== 'object') throw new TypeError();
+    // 1. Assert: Type(obj) is an Object.
+    assert(typeof obj === 'object', 'Type(obj) is an Object.');
     // 2. Let props be ? ToObject(Obj).
     let props = obj;
     // 3. Let keys be ? props.[[OwnPropertyKeys]]().
@@ -121,7 +122,7 @@ export function ParseExportsDescriptors(obj) {
 
 // 8.2.2. CreateModuleMutator(module)
 export function CreateModuleMutator(module) {
-    // 1. Assert: Assert: module is a Reflective Module Records.
+    // 1. Assert: module is a Reflective Module Records.
     assert('[[Namespace]]' in module, 'module is a Reflective Module Records.');
     // 2. Let mutator be ObjectCreate(%ObjectPrototype%).
     let mutator = Object.create(null);
@@ -129,7 +130,7 @@ export function CreateModuleMutator(module) {
     let env = module['[[Environment]]'];
     // 4. Let envRec be env’s environment record.
     let envRec = env['[[EnvironmentRecord]]'];
-    // 5. For each name in module.[[IndirectExports]], do:
+    // 5. For each name in _module_.[[IndirectExports]], do:
     for (let name of module['[[IndirectExports]]']) {
         // a. Let g be MakeArgGetter(name, envRec).
         let g = MakeArgGetter(name, envRec);
@@ -138,7 +139,7 @@ export function CreateModuleMutator(module) {
         // c. Perform ? DefinePropertyOrThrow(mutator, name, indirectExportDesc).
         Object.defineProperty(mutator, name, indirectExportDesc);
     }
-    // 6. For each name in module.[[LocalExports]], do:
+    // 6. For each name in _module_.[[LocalExports]], do:
     for (let name of module['[[LocalExports]]']) {
         // a. Assert: mutator does not already have a binding for name.
         assert(Object.getOwnPropertyDescriptor(mutator, name) === undefined, 'mutator does not already have a binding for name.');
@@ -223,12 +224,30 @@ export function ModuleDeclarationInstantiation() {
 export function ModuleEvaluation() {
     // 1. Let module be this Reflective Module Record.
     let module = this;
-    // 2. Let evaluate be module.[[Evaluate]].
-    let evaluate = module['[[Evaluate]]'];
-    // 3. Set module.[[Evaluate]] to undefined.
-    module['[[Evaluate]]'] = undefined;
-    // 4. Return evaluate().
-    return evaluate();
+    // 2. If module.[[Evaluated]] is true, return undefined.
+    if (module['[[Evaluated]]'] === true) return undefined;
+    // 3. Let func be module.[[Evaluate]].
+    let func = module['[[Evaluate]]'];
+    // 4. Set module.[[Evaluated]] to true.
+    module['[[Evaluated]]'] = true;
+    // 5. Assert: func is callable.
+    assert(IsCallable(func) === true, 'func is callable.');
+    // 6. For each requiredModule in module.[[RequestedModules]], do:
+    for (let requiredModule of module['[[RequestedModules]]']) {
+        // a. Assert: requiredModule is a Module Record.
+        assert('[[Namespace]]' in requiredModule, 'requiredModule is a Module Record.');
+        // b. Perform ? requiredModule.ModuleEvaluation().
+        ModuleEvaluation.call(requiredModule);
+    }
+    // 7. If IsCallable(func) is true, then:
+    if (IsCallable(func) === true) {
+        // a. Let argList be a new empty List.
+        let argList = [];
+        // b. Perform ? Call(func, undefined, argList).
+        func.apply(undefined, argList);
+    }
+    // 8. Return undefined.
+    return undefined;
 }
 
 // 8.3. The Module Constructor
@@ -238,20 +257,24 @@ export default function Module(descriptors, executor, evaluate) {
     let realm = Object.create(null);
     // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
     let env = NewModuleEnvironment(realm['[[globalEnv]]']);
-    // 3. Let exportDescriptors be ParseExportsDescriptors(descriptors). // TODO: interleave the subsequent loop with parsing?
+    // 3. If Type(descriptors) is not Object, throw a TypeError exception.
+    if (typeof descriptors !== 'object') throw new TypeError();
+    // 4. Let exportDescriptors be ParseExportsDescriptors(descriptors). // TODO: interleave the subsequent loop with parsing?
     let exportDescriptors = ParseExportsDescriptors(descriptors);
-    // 4. Let localExports be a new empty List.
+    // 5. Let localExports be a new empty List.
     let localExports = [];
-    // 5. Let indirectExports be a new empty List.
+    // 6. Let indirectExports be a new empty List.
     let indirectExports = [];
-    // 6. Let exportNames be a new empty List.
+    // 7. Let exportNames be a new empty List.
     let exportNames = [];
-    // 7. Let envRec be env’s environment record.
+    // 8. Let requestedModules be new empty List.
+    let requestedModules = [];
+    // 9. Let envRec be env’s environment record.
     let envRec = env['[[EnvironmentRecord]]'];
     // IMPLEMENTATION: diverging from spec to track initialized and mutable bindings
     envRec['[[$InitializeBinding]]'] = [];
     envRec['[[$MutableBinding]]'] = [];
-    // 8. For each desc in exportDescriptors, do:
+    // 10. For each desc in exportDescriptors, do:
     for (var desc of exportDescriptors) {
         // a. Let exportName be desc.[[Name]].
         let exportName = desc['[[Name]]'];
@@ -261,10 +284,13 @@ export default function Module(descriptors, executor, evaluate) {
         if (desc['[[IndirectExportDescriptor]]']) {
             // i. Let otherMod be desc.[[Module]].
             let otherMod = desc['[[Module]]'];
-            // ii. Let resolution be otherMod.ResolveExport(desc.[[Import]], « »).
+            // ii. If requestedModules does not contain the value of otherMod, then:
+            if (requestedModules.indexOf(otherMod) === -1) {
+                // 1. Append otherMod to requestedModules.
+                requestedModules.push(otherMod);
+            }
+            // iii. Let resolution be ? otherMod.ResolveExport(desc.[[Import]], « »).
             let resolution = ResolveExport.call(otherMod, desc['[[Import]]']);
-            // iii. ReturnIfAbrupt(resolution).
-            ReturnIfAbrupt(resolution);
             // iv. If resolution is null, then throw a SyntaxError exception.
             if (resolution === null) {
                 throw new SyntaxError();
@@ -296,32 +322,38 @@ export default function Module(descriptors, executor, evaluate) {
             }
         }
     }
-    // 9. If evaluate is undefined, then let evaluated be true. Otherwise let evaluated be false.
-    let evaluated = (evaluate === undefined ? true : false);
-    // 10. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[Evaluated]]:
-    // evaluated, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[Evaluate]]: evaluate}.
+
+    // 11. If evaluate is not undefined, then
+    if (evaluate !== undefined) {
+        // a. If IsCallable(evaluate) is false, throw a new TypeError exception.
+        if (IsCallable(evaluate) === false) throw new TypeError();
+    }
+    // 12. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[RequestedModules]]: _requestedModules_, [[Evaluated]]: *false*, [[Evaluate]]: evaluate}.
     let mod = {
         '[[Realm]]': realm,
         '[[Environment]]': env,
         '[[Namespace]]': undefined,
-        '[[Evaluated]]': evaluated,
         '[[LocalExports]]': localExports,
         '[[IndirectExports]]': indirectExports,
+        '[[RequestedModules]]': requestedModules,
+        '[[Evaluated]]': false,
         '[[Evaluate]]': evaluate,
     };
-    // 11. Let ns be ModuleNamespaceCreate(mod, realm, exportNames).
+    // 13. Let ns be ModuleNamespaceCreate(mod, realm, exportNames).
     // TODO: deviated from spec, `realm` is not needed in this call
     let ns = ModuleNamespaceCreate(mod, exportNames);
-    // 12. Set mod.[[Namespace]] to ns.
+    // 14. Set mod.[[Namespace]] to ns.
     mod['[[Namespace]]'] = ns;
-    // 13. If executor is not undefined, then
+    // 15. If executor is not undefined, then
     if (executor !== undefined) {
-        // a. Let mutator be CreateModuleMutator(mod).
+        // a. If IsCallable(executor) is false, throw a new TypeError exception.
+        if (IsCallable(executor) === false) throw new TypeError();
+        // b. Let mutator be CreateModuleMutator(mod).
         let mutator = CreateModuleMutator(mod);
-        // b. Perform ? executor(mutator, ns).
+        // c. Perform ? executor(mutator, ns).
         executor(mutator, ns);
     }
-    // 14. Return ns.
+    // 16. Return ns.
     return ns;
 }
 

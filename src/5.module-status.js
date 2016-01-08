@@ -52,8 +52,8 @@ export function GetStage(entry, stage) {
     let stages = entry['[[Pipeline]]'];
     // 4. For each element entry of stages, do
     for (var stageEntry of stages) {
-        // a. If stageEntry.[[Stage]] is equal to stage, return entry.
-        if (stageEntry['[[Stage]]'] === stage) return entry;
+        // a. If stageEntry.[[Stage]] is equal to stage, return stageEntry.
+        if (stageEntry['[[Stage]]'] === stage) return stageEntry;
     }
     // 7. Return undefined.
     return undefined;
@@ -112,7 +112,7 @@ export function UpgradeToStage(entry, stage) {
     // 4. Let stageEntry be GetStage(entry, stage).
     let stageEntry = GetStage(entry, stage);
     // 5. If stageEntry is not undefined, then
-    if (!stageEntry) {
+    if (stageEntry !== undefined) {
         // a. Repeat while the first element of pipeline is not equal to stageEntry
         while (pipeline[0] !== stageEntry) {
             // i. Remove first element from pipeline.
@@ -123,8 +123,8 @@ export function UpgradeToStage(entry, stage) {
 
 // 5.2. The ModuleStatus Constructor
 
-// 5.2.1. ModuleStatus(loader, key[, module])
-export default function ModuleStatus(loader, key, module) {
+// 5.2.1. ModuleStatus(loader, key)
+export default function ModuleStatus(loader, key) {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
     HowToDoThis('ModuleStatus', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. If Type(loader) is not Object, throw a TypeError exception.
@@ -133,51 +133,37 @@ export default function ModuleStatus(loader, key, module) {
     if (!Object.getOwnPropertyDescriptor(loader, '[[Registry]]')) throw new TypeError();
     // 4. Let keyString be ? ToString(key).
     let keyString = ToString(key);
-    // 5. If Type(module) is not Object, throw a TypeError exception.
-    // TODO: if (typeof module !== "object") throw new TypeError();
-    // 6. If module does not have all of the internal slots of a Module Instance (8.5), throw a TypeError exception.
-    // TODO: if (!Object.getOwnPropertyDescriptor(module, '[[Namespace]]')) throw new TypeError();
-    // 7. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%ModuleStatusPrototype%", «[[Loader]], [[Pipeline]], [[Key]], [[Module]], [[Metadata]], [[Dependencies]], [[Error]]» ).
+    // 5. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%ModuleStatusPrototype%", «[[Loader]], [[Pipeline]], [[Key]], [[Module]], [[Metadata]], [[Dependencies]], [[Error]]» ).
     let O = OrdinaryCreateFromConstructor(ModuleStatus, "%ModuleStatusPrototype%", ['[[Loader]]', '[[Pipeline]]', '[[Key]]', '[[Module]]', '[[Metadata]]', '[[Dependencies]]', '[[Error]]']);
-    // 8. Let pipeline be a new List.
+    // 6. Let pipeline be a new List.
     let pipeline = [];
-    // 9. If module exists, then
-    if (module) {
-        // a. Let result be a promise resolved with module.
-        let result = Promise.resolve(module);
-        // b. Add new stage entry record { [[Stage]]: "ready", [[Result]]: result } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "ready", '[[Result]]': result });
-    }
-    // 10. Else,
-    else {
-        // a. Add new stage entry record { [[Stage]]: "fetch", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "fetch", '[[Result]]': undefined });
-        // b. Add new stage entry record { [[Stage]]: "translate", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "translate", '[[Result]]': undefined });
-        // c. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': undefined });
-        // d. Add new stage entry record { [[Stage]]: "satisfy", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "satisfy", '[[Result]]': undefined });
-        // e. Add new stage entry record { [[Stage]]: "link", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "link", '[[Result]]': undefined });
-        // f. Add new stage entry record { [[Stage]]: "ready", [[Result]]: undefined } as a new element of the list pipeline.
-        pipeline.push({ '[[Stage]]': "ready", '[[Result]]': undefined });
-    }
-    // 11. Set O’s [[Loader]] internal slot to loader.
+    // 7. Add new stage entry record { [[Stage]]: "fetch", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "fetch", '[[Result]]': undefined });
+    // 8. Add new stage entry record { [[Stage]]: "translate", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "translate", '[[Result]]': undefined });
+    // 9. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': undefined });
+    // 10. Add new stage entry record { [[Stage]]: "satisfy", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "satisfy", '[[Result]]': undefined });
+    // 11. Add new stage entry record { [[Stage]]: "link", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "link", '[[Result]]': undefined });
+    // 12. Add new stage entry record { [[Stage]]: "ready", [[Result]]: undefined } as a new element of the list pipeline.
+    pipeline.push({ '[[Stage]]': "ready", '[[Result]]': undefined });
+    // 13. Set O’s [[Loader]] internal slot to loader.
     O['[[Loader]]'] = loader;
-    // 12. Set O’s [[Pipeline]] internal slot to pipeline.
+    // 14. Set O’s [[Pipeline]] internal slot to pipeline.
     O['[[Pipeline]]'] = pipeline;
-    // 13. Set O’s [[Key]] internal slot to keyString.
+    // 15. Set O’s [[Key]] internal slot to keyString.
     O['[[Key]]'] = keyString;
-    // 14. Set O’s [[Module]] internal slot to module.
-    O['[[Module]]'] = module;
-    // 15. Set O’s [[Metadata]] internal slot to undefined.
+    // 16. Set O’s [[Module]] internal slot to module.
+    O['[[Module]]'] = undefined;
+    // 17. Set O’s [[Metadata]] internal slot to undefined.
     O['[[Metadata]]'] = undefined;
-    // 16. Set O’s [[Dependencies]] internal slot to undefined.
+    // 18. Set O’s [[Dependencies]] internal slot to undefined.
     O['[[Dependencies]]'] = undefined;
-    // 17. Set O’s [[Error]] internal slot to false.
+    // 19. Set O’s [[Error]] internal slot to false.
     O['[[Error]]'] = false;
-    // 18. Return O.
+    // 20. Return O.
     return O;
 }
 
@@ -198,7 +184,19 @@ ModuleStatus.prototype = {
         return stageEntry['[[Stage]]'];
     },
 
-    // 5.4.3. get ModuleStatus.prototype.module
+    // 5.4.3. get ModuleStatus.prototype.originalKey
+    get originalKey() {
+        // 1. Let entry be this value.
+        let entry = this;
+        // 2. If Type(entry) is not Object, throw a TypeError exception.
+        if (typeof entry !== 'object') throw new TypeError('entry');
+        // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
+        if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
+        // 4. Return entry.[[Key]].
+        return entry['[[Key]]'];
+    },
+
+    // 5.4.4. get ModuleStatus.prototype.module
     get module() {
         // 1. Let entry be this value.
         let entry = this;
@@ -206,11 +204,15 @@ ModuleStatus.prototype = {
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
-        // 4. Return entry.[[Module]].
-        return entry['[[Module]]'];
+        // 4. Let module be entry.[[Module]].
+        let module = entry['[[Module]]'];
+        // 5. If module is a Module Record, return GetModuleNamespace(module).
+        if ('[[Namespace]]' in module) return GetModuleNamespace(module);
+        // 6. Return undefined.
+        return undefined;
     },
 
-    // 5.4.4. get ModuleStatus.prototype.error
+    // 5.4.5. get ModuleStatus.prototype.error
     get error() {
         // 1. Let entry be this value.
         let entry = this;
@@ -222,7 +224,7 @@ ModuleStatus.prototype = {
         return entry['[[Error]]'];
     },
 
-    // 5.4.5. get ModuleStatus.prototype.dependencies
+    // 5.4.6. get ModuleStatus.prototype.dependencies
     get dependencies() {
         // 1. Let entry be this value.
         let entry = this;
@@ -242,24 +244,20 @@ ModuleStatus.prototype = {
             let requestNameDesc = {value: pair['[[RequestName]]'], writable: false, enumerable: true, configurable: false};
             // c. Perform ? DefinePropertyOrThrow(O, "requestName", requestNameDesc).
             Object.defineProperty(O, "requestName", requestNameDesc);
-            // d. Let keyDesc be the PropertyDescriptor{[[Value]]: pair.[[Key]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
-            let keyDesc = {value: pair['[[Key]]'], writable: false, enumerable: true, configurable: false};
-            // e. Perform ? DefinePropertyOrThrow(O, "key", keyDesc).
-            Object.defineProperty(O, "key", keyDesc);
-            // f. Let moduleStatusDesc be the PropertyDescriptor{[[Value]]: pair.[[ModuleStatus]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
+            // d. Let moduleStatusDesc be the PropertyDescriptor{[[Value]]: pair.[[ModuleStatus]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
             let moduleStatusDesc = {value: pair['[[ModuleStatus]]'], writable: false, enumerable: true, configurable: false};
-            // g. Perform ? DefinePropertyOrThrow(O, "entry", moduleStatusDesc).
+            // e. Perform ? DefinePropertyOrThrow(O, "entry", moduleStatusDesc).
             Object.defineProperty(O, "entry", moduleStatusDesc);
-            // Perform ? CreateDataProperty(array, ? ToString(n), O).
+            // f. Perform ? CreateDataProperty(array, ? ToString(n), O).
             array[ToString(n)] = O;
-            // i. Increment n by 1.
+            // g. Increment n by 1.
             n += 1;
         }
         // 7. Return array.
         return array;
     },
 
-    // 5.4.6. ModuleStatus.prototype.load(stage)
+    // 5.4.7. ModuleStatus.prototype.load(stage)
     load(stage) {
         // 1. Let entry be this value.
         let entry = this;
@@ -267,29 +265,17 @@ ModuleStatus.prototype = {
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
-
-        let stageValue;
-        try {
-
-            // 4. If stage is undefined then let stageValue be "fetch".
-            if (!stage) stageValue = 'fetch';
-            // 5. Else let stageValue be ToString(stage).
-            else stageValue = ToString(stage);
-
-        } catch (stageValue) {
-
-            // 6. RejectIfAbrupt(stageValue).
-            return Promise.reject(stageValue);
-
-        }
-
-        // 7. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
+        // 4. If stage is undefined, let stageValue be "fetch"; otherwise, let stageValue be ToString(stage).
+        let stageValue = stage === undefined ? 'fetch' : ToString(stage);
+        // 5. RejectIfAbrupt(stageValue).
+        // TODO: diverging by ignoring the RejectIfAbrupt.
+        // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
-        // 8. Return LoadModule(entry, stageValue).
+        // 7. Return LoadModule(entry, stageValue).
         return LoadModule(entry, stageValue);
     },
 
-    // 5.4.7. ModuleStatus.prototype.result(stage)
+    // 5.4.8. ModuleStatus.prototype.result(stage)
     result(stage) {
         // 1. Let entry be this value.
         let entry = this;
@@ -297,43 +283,23 @@ ModuleStatus.prototype = {
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
-
-        try {
-
-            // 4. Let stageValue be ToString(stage).
-            let stageValue = ToString(stage);
-
-        } catch (stageValue) {
-
-            // 5. RejectIfAbrupt(stageValue).
-            return Promise.reject(stageValue);
-
-        }
-
+        // 4. Let stageValue be ToString(stage).
+        let stageValue = ToString(stage);
+        // 5. RejectIfAbrupt(stageValue).
+        // TODO: diverging by ignoring the RejectIfAbrupt.
         // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
-
-        try {
-
-            // 7. Let stageEntry be GetStage(entry, stageValue).
-            let stageEntry = GetStage(entry, stageValue);
-
-        } catch (stageEntry) {
-
-            // 8. RejectIfAbrupt(stageEntry).
-            return Promise.reject(stageEntry);
-
-        }
-
-        // 9. If stageEntry is undefined, return a promise resolved with undefined.
+        // 7. Let stageEntry be GetStage(entry, stageValue).
+        let stageEntry = GetStage(entry, stageValue);
+        // 8. If stageEntry is undefined, return a promise resolved with undefined.
         if (stageEntry === undefined) return Promise.resolve(undefined);
-        // 10. If stageEntry.[[Result]] is undefined, return a promise resolved with undefined.
+        // 9. If stageEntry.[[Result]] is undefined, return a promise resolved with undefined.
         if (stageEntry['[[Result]]'] === undefined) return Promise.resolve(undefined);
-        // 11. Return the result of transforming stageEntry.[[Result]] with a new pass-through promise.
+        // 10. Return the result of transforming stageEntry.[[Result]] with a new pass-through promise.
         return PassThroughPromise(stageEntry['[[Result]]']);
     },
 
-    // 5.4.8. ModuleStatus.prototype.resolve(stage, result)
+    // 5.4.9. ModuleStatus.prototype.resolve(stage, result)
     resolve(stage, result) {
         // 1. Let entry be this value.
         let entry = this;
@@ -341,19 +307,10 @@ ModuleStatus.prototype = {
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
-
-        try {
-
-            // 4. Let stageValue be ToString(stage).
-            let stageValue = ToString(stage);
-
-        } catch (stageValue) {
-
-            // 5. RejectIfAbrupt(stageValue).
-            return Promise.reject(stageValue);
-
-        }
-
+        // 4. Let stageValue be ToString(stage).
+        let stageValue = ToString(stage);
+        // 5. RejectIfAbrupt(stageValue).
+        // TODO: diverging by ignoring the RejectIfAbrupt.
         // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
         // 7. Let p0 be the result of transforming result with a new pass-through promise.
@@ -385,7 +342,7 @@ ModuleStatus.prototype = {
         return p1;
     },
 
-    // 5.4.9. ModuleStatus.prototype.reject(stage, error)
+    // 5.4.10. ModuleStatus.prototype.reject(stage, error)
     reject(stage, error) {
         // 1. Let entry be this value.
         let entry = this;
@@ -393,19 +350,10 @@ ModuleStatus.prototype = {
         if (typeof entry !== 'object') throw new TypeError('entry');
         // 3. If entry does not have all of the internal slots of a ModuleStatus Instance (5.5), throw a TypeError exception.
         if (!Object.getOwnPropertyDescriptor(entry, '[[Module]]')) throw new TypeError();
-
-        try {
-
-            // 4. Let stageValue be ToString(stage).
-            let stageValue = ToString(stage);
-
-        } catch (stageValue) {
-
-            // 5. RejectIfAbrupt(stageValue).
-            return Promise.reject(stageValue);
-
-        }
-
+        // 4. Let stageValue be ToString(stage).
+        let stageValue = ToString(stage);
+        // 5. RejectIfAbrupt(stageValue).
+        // TODO: diverging by ignoring the RejectIfAbrupt.
         // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
         // 7. Let p0 be the result of transforming error with a new pass-through promise.

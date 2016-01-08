@@ -5,7 +5,12 @@ import {
 
 import {
     GetCurrentStage,
+    UpgradeToStage,
 } from './5.module-status.js';
+
+import {
+    ModuleDeclarationInstantiation,
+} from './8.module.js';
 
 // 7. Linking Semantics
 
@@ -51,16 +56,20 @@ export function Link(root) {
     for (let dep of deps) {
         // a. Let depStageEntry be GetCurrentStage(dep).
         let depStageEntry = GetCurrentStage(dep);
-        // b. If depStageEntry.[[Stage]] is "link" and dep.[[Module]] is a Function object, then:
-        if (depStageEntry['[[Stage]]'] === "link" && typeof dep['[[Module]]'] === 'function') {
-            // i. Let f be dep.[[Module]].
-            let f = dep['[[Module]]'];
-            // ii. Let m be ? f().
-            let m = f();
-            // iii. Set dep.[[Module]] to m.
-            dep['[[Module]]'] = m;
-            // iv. Perform UpgradeToStage(dep, "ready").
-            UpgradeToStage(dep, 'ready');
+        // b. If dep.[[Module]] is a Function object, then:
+        if (typeof dep['[[Module]]'] === 'function') {
+            // i. Assert: depStageEntry.[[Stage]] is "link".
+            assert(depStageEntry['[[Stage]]'] === 'link', 'depStageEntry.[[Stage]] is "link".');
+            // ii. Let func be dep.[[Module]].
+            let func = dep['[[Module]]'];
+            // iii. Let argList be a new empty List.
+            let argList = [];
+            // iv. Let ns be ? Call(func, undefined, argList).
+            let ns = func.call(undefined, ...argList);
+            // v. If ns is not a module namespace exotic object, throw a TypeError exception.
+            if (!('[[Module]]' in ns)) throw new TypeError();
+            // vi. Set dep.[[Module]] to ns.[[Module]].
+            dep['[[Module]]'] = ns['[[Module]]'];
         }
     }
     // 4. Assert: the following sequence is guaranteed not to run any user code.
@@ -105,8 +114,8 @@ export function ComputeDependencyGraph(entry, result) {
     assert(Array.isArray(result), 'result must be a List.');
     // 3. If entry is already in result, return undefined.
     if (result.indexOf(entry) !== -1) return undefined;
-    // 4. Append entry to result.
-    result.push(entry);
+    // 4. Insert entry as the first element of result.
+    result.unshift(entry);
     // 5. For each pair in entry.[[Dependencies]], do:
     for (let pair of entry['[[Dependencies]]']) {
         // a. Assert: pair.[[ModuleStatus]] is defined.

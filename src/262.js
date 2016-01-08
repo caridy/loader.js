@@ -46,6 +46,8 @@ export function GetMethod(v, p) {
 
 // 7.2.3 IsCallable ( argument )
 export function IsCallable(argument) {
+    // diverging from spec to align with js
+    if (typeof argument === 'function') return true;
     if (typeof argument !== 'object') return false;
     if (typeof argument.call === 'function') return true;
     return false;
