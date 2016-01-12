@@ -1,8 +1,4 @@
 import {
-    PassThroughPromise,
-} from './2.conventions.js';
-
-import {
     CreateRegistry,
 } from "./4.registry.js";
 
@@ -17,12 +13,16 @@ import {
 } from "./6.loading.js";
 
 import {
+    EnsureEvaluated,
+} from "./7.linking.js";
+
+import {
     OrdinaryCreateFromConstructor
 } from "./262.js";
 
-// TODO: remove helpers
 import {
-    HowToDoThis
+    HowToDoThis,
+    transformPromise,
 } from "./utils.js";
 
 // 3.1.1. Loader()
@@ -49,11 +49,14 @@ Loader.prototype = {
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         if (!loader['[[Registry]]']) throw new TypeError();
         // 4. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key, runs the following steps:
-        return Resolve(loader, name, referrer).then((key) => {
+        return transformPromise(Resolve(loader, name, referrer)).then((key) => {
             // a. Let entry be EnsureRegistered(loader, key).
             let entry = EnsureRegistered(loader, key);
-            // b. Return LoadModule(entry, "ready").
-            return LoadModule(entry, "ready");
+            // b. Return the result of transforming LoadModule(entry, "instantiate") with a fulfillment handler that, when called, runs the following steps:
+            return transformPromise(LoadModule(entry, "instantiate")).then(() => {
+                // i. Return EnsureEvaluated(entry).
+                return EnsureEvaluated(entry);
+            });
         });
     },
 
@@ -78,8 +81,8 @@ Loader.prototype = {
         // 3. If loader does not have all of the internal slots of a Loader Instance (3.5), throw a TypeError exception.
         if (!loader['[[Registry]]']) throw new TypeError();
         try {
-            // 4. If stage is undefined then let stage be "ready".
-            if (stage === undefined) stage = "ready";
+            // 4. If stage is undefined then let stage be "instantiate".
+            if (stage === undefined) stage = "instantiate";
             // 5. Else let stageValue be ToString(stage).
             else stage = stage.toString();
         } catch (e) {
@@ -89,7 +92,7 @@ Loader.prototype = {
         // 7. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (IsValidStageValue(stageValue) === false) return Promise.reject(new RangeError('Invalid stage value'));
         // 8. Return the result of transforming Resolve(loader, name, referrer) with a fulfillment handler that, when called with argument key, runs the following steps:
-        return Resolve(loader, name, referrer).then((key) => {
+        return transformPromise(Resolve(loader, name, referrer)).then((key) => {
             // a. Let entry be EnsureRegistered(loader, key).
             let entry = EnsureRegistered(loader, key);
             // b. Return LoadModule(entry, stageValue).

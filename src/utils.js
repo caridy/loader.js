@@ -13,24 +13,52 @@ keeping an internal slot for resolver and rejecter. E.g.:
 */
 const PromiseSlotResolver = Symbol();
 const PromiseSlotRejecter = Symbol();
-export function createPromiseSlot() {
-    let resolve;
-    let reject;
-    let p = new Promise(function (resolveFn, reject) {
-        resolve = resolveFn;
-        reject = rejectFn;
-    });
-    p[PromiseSlotResolver] = resolve;
-    p[PromiseSlotRejecter] = reject;
-    return p;
-}
+const PromiseSlotResolvedOrRejected = Symbol();
 
-export function resolvePromiseSlot(p, value) {
+export function resolvePromise(p, value) {
+    assert(PromiseSlotResolvedOrRejected in p, 'extra: only promise we create can be inspected');
     p[PromiseSlotResolver](value);
 }
 
-export function rejectPromiseSlot(p, error) {
+export function rejectPromise(p, error) {
+    assert(PromiseSlotResolvedOrRejected in p, 'extra: only promise we create can be inspected');
     p[PromiseSlotRejecter](error);
+}
+
+export function transformPromise(p) {
+    if (p && PromiseSlotResolvedOrRejected in p) return p; // optimization
+    let resolve;
+    let reject;
+    let result = new Promise(function (resolveFn, rejectFn) {
+        resolve = resolveFn;
+        reject = rejectFn;
+    });
+    let then = result.then;
+    result[PromiseSlotResolver] = resolve;
+    result[PromiseSlotRejecter] = reject;
+    result[PromiseSlotResolvedOrRejected] = false;
+    result.then = (resolve, reject) => transformPromise(then.call(result, resolve, reject));
+    Promise.resolve(p).then((value) => {
+        result[PromiseSlotResolvedOrRejected] = true;
+        return resolve(value);
+    }, (error) => {
+        result[PromiseSlotResolvedOrRejected] = true;
+        return reject(error);
+    });
+    return result;
+}
+
+export function isPromiseResolved(p) {
+    assert(PromiseSlotResolvedOrRejected in p, 'extra: only promise we create can be inspected');
+    return p[PromiseSlotResolvedOrRejected];
+}
+
+export function resolvedPromise(value) {
+    return tranformPromise(Promise.resolve(value));
+}
+
+export function rejectedPromise(error) {
+    return transformPromise(Promise.rejected(error));
 }
 
 /*
@@ -61,4 +89,13 @@ export function HowToDoThis(algo, step) {
         throw new Error('HowToDoThis(algo, step) is missing the `step` argument');
     }
     console.log(`TODO: algo [${algo}], step: ${step}`);
+}
+
+export function Record(o) {
+    for (let name in o) {
+        Object.defineProperty(o, name, {
+            enumerable: false,
+        });
+    }
+    return o;
 }

@@ -8,11 +8,6 @@ import {
     HostResolveImportedModule,
 } from './7.linking.js';
 
-import {
-    ResolveExport,
-} from './8.module.js';
-
-
 export function OrdinaryCreateFromConstructor (constructor, intrinsicDefaultProto, internalSlotsList) {
     // 1. Assert: intrinsicDefaultProto is a String value that is this specification's name of an intrinsic object. The corresponding object must be an intrinsic that is intended to be used as the [[Prototype]] value of an object.
     // 2. Let proto be ? GetPrototypeFromConstructor(constructor, intrinsicDefaultProto).
@@ -62,13 +57,13 @@ export function GetModuleNamespace(module) {
     // 3. If namespace is undefined, then
     if (namespace === undefined) {
         // a. Let exportedNames be ? module.GetExportedNames(« »).
-        let exportedNames = GetExportedNames.call(module);
+        let exportedNames = module.GetExportedNames([]);
         // b. Let unambiguousNames be a new empty List.
         let unambiguousNames = [];
         // c. For each name that is an element of exportedNames,
         for (var name in exportedNames) {
             // i. Let resolution be ? module.ResolveExport(name, « », « »).
-            let resolution = ResolveExport.call(module, name);
+            let resolution = module.ResolveExport(name, [], []);
             // ii. If resolution is null, throw a SyntaxError exception.
             if (resolution === null) throw new SyntaxError();
             // iii. If resolution is not "ambiguous", append name to unambiguousNames.
@@ -115,9 +110,9 @@ export function GetExportedNames(exportStarSet) {
         // a. Let requestedModule be ? HostResolveImportedModule(module, e.[[ModuleRequest]]).
         let requestedModule = HostResolveImportedModule(module, e['[[ModuleRequest]]']);
         // b. Let starNames be requestedModule.GetExportedNames(exportStarSet).
-        let starNames = GetExportedNames.call(requestedModule, exportStarSet);
+        let starNames = requestedModule.GetExportedNames(exportStarSet);
         // c. For each element n of starNames, do
-        for (let n of startNames) {
+        for (let n of starNames) {
             // i. If SameValue(n, "default") is false, then
             if (n !== 'default') {
                 // 1. If n is not an element of exportedNames, then
@@ -177,21 +172,21 @@ export function ModuleNamespaceCreate (module, exports) {
         // [[Set]] ( P, V, Receiver),
         // [[Delete]] (P)
         // [[Enumerate]] ()
-        M['[[Enumerate]]'] = function () {
+        Object.defineProperty(M, '[[Enumerate]]', { get: function () {
             // Let exports be the value of O's [[Exports]] internal slot.
             let exports = this['[[Exports]]'];
             // Return CreateListIterator(exports).
             return [].concat(exports);
-        };
+        }, configurable: false, enumerable: false });
         // [[OwnPropertyKeys]] ( )
         // Unfortunately, none of these can be implemented in user-land in a polyfill.
         // In the case of [[Enumerate]], since it will be used by step 8, we defined
         // it anyways.
     };
     // 6. Set M's [[Module]] internal slot to module.
-    M['[[Module]]'] = module;
+    Object.defineProperty(M, '[[Module]]', { value: module, configurable: false, enumerable: false });
     // 7. Set M's [[Exports]] internal slot to exports.
-    M['[[Exports]]'] = exports;
+    Object.defineProperty(M, '[[Exports]]', { value: exports, configurable: false, enumerable: false });
 
     // 8. Create own properties of M corresponding to the definitions in 26.3.
     // TODO: diverging from spec since this is not very clear in the spec, it is more like freestyle
@@ -233,7 +228,7 @@ export function ModuleNamespaceCreate (module, exports) {
 }
 
 // 8.1.1.1.2 CreateMutableBinding (N, D)
-export function CreateMutableBinding (N, D) {
+export function CreateMutableBinding (N/*, D*/) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     let envRec = this;
     // 2. Assert: envRec does not already have a binding for N.
@@ -251,7 +246,7 @@ export function CreateMutableBinding (N, D) {
 }
 
 // 8.1.1.1.3 CreateImmutableBinding (N, S)
-export function CreateImmutableBinding (N, S) {
+export function CreateImmutableBinding (N/*, S*/) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     let envRec = this;
     // 2. Assert: envRec does not already have a binding for N.
@@ -303,4 +298,344 @@ export function MakeArgSetter (name, env) {
             });
         }
     };
+}
+
+// 15.2.1.9 Static Semantics: ImportedLocalNames (importEntries)
+export function ImportedLocalNames(importEntries) {
+    // 1. Let localNames be a new empty List.
+    let localNames = [];
+    // 2. For each ImportEntry Record i in importEntries, do
+    for (let i of importEntries) {
+        // a. Append i.[[LocalName]] to localNames.
+        localNames.push(i['[[LocalName]]']);
+    }
+    // 3. Return localNames.
+    return localNames;
+}
+
+// 15.2.1.16.1 ParseModule (sourceText, hostDefined)
+export function ParseModule (sourceText, hostDefined) {
+    // 1. Assert: sourceText is an ECMAScript source text (see clause 10).
+    assert(typeof(sourceText) === 'string', 'sourceText is an ECMAScript source text (see clause 10).');
+    // 2. Parse sourceText using Module as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let body be the resulting parse tree. Otherwise, let body be a List of one or more SyntaxError or ReferenceError objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation dependent, but at least one must be present.
+    let body = EnvSourceTextParserHook(sourceText);
+    // 3. If body is a List of errors, then return body.
+    // TODO: ignoring this line, errors will throw
+    // 4. Let requestedModules be the ModuleRequests of body.
+    let requestedModules = body.ModuleRequests;
+    // 5. Let importEntries be ImportEntries of body.
+    let importEntries = body.ImportEntries;
+    // 6. Let importedBoundNames be ImportedLocalNames(importEntries).
+    let importedBoundNames = ImportedLocalNames(importEntries);
+    // 7. Let indirectExportEntries be a new empty List.
+    let indirectExportEntries = [];
+    // 8. Let localExportEntries be a new empty List.
+    let localExportEntries = [];
+    // 9. Let starExportEntries be a new empty List.
+    let starExportEntries = [];
+    // 10. Let exportEntries be ExportEntries of body.
+    let exportEntries = body.ExportEntries;
+    // 11. For each record ee in exportEntries, do
+    for (let ee of exportEntries) {
+        // a. If ee.[[ModuleRequest]] is null, then
+        if (ee['[[ModuleRequest]]'] === null) {
+            // i. If ee.[[LocalName]] is not an element of importedBoundNames, then
+            if (importedBoundNames.indexOf(ee['[[LocalName]]']) === -1) {
+                // 1. Append ee to localExportEntries.
+                localExportEntries.push(ee);
+            }
+            // ii. Else,
+            else {
+                // Let ie be the element of importEntries whose [[LocalName]] is the same as ee.[[LocalName]].
+                let ie = importEntries.find((i) => i['[[LocalName]]'] === ee['[[LocalName]]']);
+                // If ie.[[ImportName]] is "*", then
+                if (ie['[[ImportName]]'] === '*') {
+                    // Assert: this is a re-export of an imported module namespace object.
+                    assert(false, 'this is a re-export of an imported module namespace object.');
+                    // Append ee to localExportEntries.
+                    localExportEntries.push(ee);
+                }
+                // Else, this is a re-export of a single name
+                else {
+                    // Append to indirectExportEntries the Record {[[ModuleRequest]]: ie.[[ModuleRequest]], [[ImportName]]: ie.[[ImportName]], [[LocalName]]: null, [[ExportName]]: ee.[[ExportName]] }.
+                    indirectExportEntries.push({
+                        '[[ModuleRequest]]': ie['[[ModuleRequest]]'],
+                        '[[ImportName]]': ie['[[ImportName]]'],
+                        '[[LocalName]]': null,
+                        '[[ExportName]]': ee['[[ExportName]]']
+                    });
+                }
+            }
+        }
+        // b. Else, if ee.[[ImportName]] is "*", then
+        else if (ee['[[ImportName]]'] === '*') {
+            // i. Append ee to starExportEntries.
+            starExportEntries.push(ee);
+        }
+        // c. Else,
+        else {
+            // i. Append ee to indirectExportEntries.
+            indirectExportEntries.push(ee);
+        }
+    }
+    // 12. Let realm be the running execution context's Realm.
+    let realm = Object.create(null);
+    // 13. Return Source Text Module Record {[[Realm]]: realm, [[Environment]]: undefined, [[HostDefined]]: hostDefined, [[Namespace]]: undefined, [[Evaluated]]: false, [[ECMAScriptCode]]: body, [[RequestedModules]]: requestedModules, [[ImportEntries]]: importEntries, [[LocalExportEntries]]: localExportEntries, [[StarExportEntries]]: starExportEntries, [[IndirectExportEntries]]: indirectExportEntries}.
+    return {
+        '[[Realm]]': realm,
+        '[[Environment]]': undefined,
+        '[[HostDefined]]': hostDefined,
+        '[[Namespace]]': undefined,
+        '[[Evaluated]]': false,
+        '[[ECMAScriptCode]]': body,
+        '[[RequestedModules]]': requestedModules,
+        '[[ImportEntries]]': importEntries,
+        '[[LocalExportEntries]]': localExportEntries,
+        '[[StarExportEntries]]': starExportEntries,
+        '[[IndirectExportEntries]]': indirectExportEntries,
+        // wiring up concrete implementations
+        GetExportedNames,
+        ModuleDeclarationInstantiation,
+        ModuleEvaluation,
+        ResolveExport,
+    };
+}
+
+// 15.2.1.16.3 ResolveExport( exportName, resolveSet, exportStarSet )
+export function ResolveExport(exportName, resolveSet, exportStarSet) {
+    // 1. Let module be this Source Text Module Record.
+    let module = this;
+    // 2. For each Record {[[module]], [[exportName]]} r in resolveSet, do:
+    for (let r of resolveSet) {
+        // a. If module and r.[[module]] are the same Module Record and SameValue(exportName, r.[[exportName]]) is true, then
+        if (module === r['[[module]]'] && exportName === r['[[exportName]]']) {
+            // i. Assert: this is a circular import request.
+            // TODO
+            // ii. Return null.
+            return null;
+        }
+    }
+    // 2. Append the Record {[[module]]: module, [[exportName]]: exportName} to resolveSet.
+    resolveSet.push({
+        '[[module]]': module,
+        '[[exportName]]': exportName
+    });
+    // 4. For each ExportEntry Record e in module.[[LocalExportEntries]], do
+    for (let e of module['[[LocalExportEntries]]']) {
+        // a. If SameValue(exportName, e.[[ExportName]]) is true, then
+        if (exportName === e['[[ExportName]]']) {
+            // i. Assert: module provides the direct binding for this export.
+            // TODO:
+            // ii. Return Record{[[module]]: module, [[bindingName]]: e.[[LocalName]]}.
+            return {
+                '[[module]]': module,
+                '[[bindingName]]': e['[[LocalName]]'],
+            };
+        }
+    }
+    // 5. For each ExportEntry Record e in module.[[IndirectExportEntries]], do
+    for (let e of module['[[IndirectExportEntries]]']) {
+        // a. If SameValue(exportName, e.[[ExportName]]) is true, then
+        if (exportName === e['[[ExportName]]']) {
+            // i. Assert: module imports a specific binding for this export.
+            // TODO:
+            // ii. Let importedModule be ? HostResolveImportedModule(module, e.[[ModuleRequest]]).
+            let importedModule = HostResolveImportedModule(module, e['[[ModuleRequest]]']);
+debugger;
+            // iii. Let indirectResolution be ? importedModule.ResolveExport(e.[[ImportName]], resolveSet, exportStarSet).
+            let indirectResolution = importedModule.ResolveExport(e['[[ImportName]]'], resolveSet, exportStarSet);
+            // iv. If indirectResolution is not null, return indirectResolution.
+            if (indirectResolution !== null) return indirectResolution;
+        }
+    }
+    // 6. If SameValue(exportName, "default") is true, then
+    if (exportName === 'default') {
+        // a. Assert: A default export was not explicitly defined by this module.
+        // TODO:
+        // b. Throw a SyntaxError exception.
+        throw new SyntaxError();
+        // c. NOTE A default export cannot be provided by an export *.
+    }
+    // 7. If exportStarSet contains module, return null.
+    if (exportStarSet.indexOf(module) !== -1) return null;
+    // 8. Append module to exportStarSet.
+    exportStarSet.push(module);
+    // 9. Let starResolution be null.
+    let starResolution = null;
+    // 10. For each ExportEntry Record e in module.[[StarExportEntries]], do
+    for (let e of module['[[StarExportEntries]]']) {
+        // a. Let importedModule be ? HostResolveImportedModule(module, e.[[ModuleRequest]]).
+        let importedModule = HostResolveImportedModule(module, e['[[ModuleRequest]]']);
+        // b. Let resolution be ? importedModule.ResolveExport(exportName, resolveSet, exportStarSet).
+        let resolution = importedModule.ResolveExport(exportName, resolveSet, exportStarSet);
+        // c. If resolution is "ambiguous", return "ambiguous".
+        if (resolution === 'ambiguous') return 'ambiguous';
+        // d. If resolution is not null, then
+        if (resolution !== null) {
+            // i. If starResolution is null, let starResolution be resolution.
+            if (starResolution === null) starResolution = resolution;
+            // ii. Else,
+            else {
+                // 1. Assert: there is more than one * import that includes the requested name.
+                // TODO:
+                // 2. If resolution.[[module]] and starResolution.[[module]] are not the same Module Record or SameValue(resolution.[[bindingName]], starResolution.[[bindingName]]) is false, return "ambiguous".
+                if (resolution['[[module]]'] !== starResolution['[[module]]'] || resolution['[[bindingName]]'] !== starResolution['[[bindingName]]']) return 'ambiguous';
+            }
+        }
+    }
+    // 11. Return starResolution.
+    return starResolution;
+}
+
+// 15.2.1.16.5 ModuleEvaluation()
+export function ModuleEvaluation() {
+    // 1. Let module be this Source Text Module Record.
+    let module = this;
+    // 2. Assert: ModuleDeclarationInstantiation has already been invoked on module and successfully completed.
+    assert(module['[[Environment]]'] !== undefined, 'ModuleDeclarationInstantiation has already been invoked on module and successfully completed.');
+    // 3. Assert: module.[[Realm]] is not undefined.
+    assert(module['[[Realm]]'] !== undefined, 'module.[[Realm]] is not undefined.');
+    // 4. If module.[[Evaluated]] is true, return undefined.
+    if (module['[[Evaluated]]'] === true) return undefined;
+    // 5. Set module.[[Evaluated]] to true.
+    module['[[Evaluated]]'] = true;
+    // 6. For each String required that is an element of module.[[RequestedModules]] do,
+    for (let required of module['[[RequestedModules]]']) {
+        // a. Let requiredModule be ? HostResolveImportedModule(module, required).
+        let requiredModule = HostResolveImportedModule(module, required);
+        // b. Let status be ? requiredModule.ModuleEvaluation().
+        requiredModule.ModuleEvaluation();
+    }
+    // 7. Let moduleCxt be a new ECMAScript code execution context.
+    let moduleCxt = Object.create({});
+    // 8. Set the Function of moduleCxt to null.
+    moduleCxt.Function = null;
+    // 9. Set the Realm of moduleCxt to module.[[Realm]].
+    moduleCxt.Realm = module['[[Realm]]'];
+    // 10. Set the ScriptOrModule of moduleCxt to module.
+    moduleCxt.ScriptOrModule = module;
+    // 11. Assert: module has been linked and declarations in its module environment have been instantiated.
+    // 12. Set the VariableEnvironment of moduleCxt to module.[[Environment]].
+    moduleCxt.VariableEnvironment = module['[[Environment]]'];
+    // 13. Set the LexicalEnvironment of moduleCxt to module.[[Environment]].
+    moduleCxt.LexicalEnvironment = module['[[Environment]]'];
+    // 14. Suspend the currently running execution context.
+    // 15. Push moduleCxt on to the execution context stack; moduleCxt is now the running execution context.
+    // 16. Let result be the result of evaluating module.[[ECMAScriptCode]].
+    EnvECMAScriptEvaluationHook(moduleCxt, module['[[ECMAScriptCode]]']);
+    // 17. Suspend moduleCxt and remove it from the execution context stack.
+    // 18. Resume the context that is now on the top of the execution context stack as the running execution context.
+    // 19. Return Completion(result).
+    return;
+}
+
+// 15.2.1.16.4 ModuleDeclarationInstantiation()
+export function ModuleDeclarationInstantiation() {
+    // 1. Let module be this Source Text Module Record.
+    let module = this;
+    // 2. Let realm be module.[[Realm]].
+    let realm = module['[[Realm]]'];
+    // 3. Assert: realm is not undefined.
+    assert(realm !== undefined, 'realm is not undefined.');
+    // 4. Let code be module.[[ECMAScriptCode]].
+    let code = module['[[ECMAScriptCode]]'];
+    // 5. If module.[[Environment]] is not undefined, return NormalCompletion(empty).
+    if (module['[[Environment]]'] !== undefined) return;
+    // 6. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
+    let env = NewModuleEnvironment(realm['[[globalEnv]]']);
+    // 7. Set module.[[Environment]] to env.
+    module['[[Environment]]'] = env;
+    // 8. For each String required that is an element of module.[[RequestedModules]] do,
+    for (let required of module['[[RequestedModules]]']) {
+        // a. NOTE: Before instantiating a module, all of the modules it requested must be available. An implementation may perform this test at any time prior to this point,
+        // b. Let requiredModule be ? HostResolveImportedModule(module, required).
+        let requiredModule = HostResolveImportedModule(module, required);
+        // c. Let status be ? requiredModule.ModuleDeclarationInstantiation().
+        requiredModule.ModuleDeclarationInstantiation();
+    }
+    // 9. For each ExportEntry Record e in module.[[IndirectExportEntries]], do
+    for (let e of module['[[IndirectExportEntries]]']) {
+        debugger;
+        // a. Let resolution be ? module.ResolveExport(e.[[ExportName]], « », « »).
+        let resolution = module.ResolveExport(e['[[ExportName]]'], [], []);
+        // b. If resolution is null or resolution is "ambiguous", throw a SyntaxError exception.
+        if (resolution === null || resolution === "ambiguous") throw new SyntaxError();
+    }
+    // 10. Assert: all named exports from module are resolvable.
+    // 11. Let envRec be env's EnvironmentRecord.
+    let envRec = env['[[EnvironmentRecord]]'];
+    // 12. For each ImportEntry Record in in module.[[ImportEntries]], do
+    for (let i of module['[[ImportEntries]]']) {
+        // a. Let importedModule be ? HostResolveImportedModule(module, in.[[ModuleRequest]]).
+        let importedModule = HostResolveImportedModule(module, i['[[ModuleRequest]]']);
+        // b. If in.[[ImportName]] is "*", then
+        if (i['[[ImportName]]'] === '*') {
+            // i. Let namespace be ? GetModuleNamespace(importedModule).
+            let namespace = GetModuleNamespace(importedModule);
+            // ii. Let status be envRec.CreateImmutableBinding(in.[[LocalName]], true).
+            CreateImmutableBinding.call(envRec, i['[[LocalName]]'], true);
+            // iii. Assert: status is not an abrupt completion.
+            // iv. Call envRec.InitializeBinding(in.[[LocalName]], namespace).
+            InitializeBinding.call(envRec, i['[[LocalName]]'], namespace);
+        }
+        // c. Else,
+        else {
+            // i. Let resolution be ? importedModule.ResolveExport(in.[[ImportName]], « », « »).
+            let resolution = importedModule.ResolveExport(i['[[ImportName]]'], [], []);
+            // ii. If resolution is null or resolution is "ambiguous", throw a SyntaxError exception.
+            if (resolution === null || resolution === "ambiguous") throw new SyntaxError();
+            // iii. Call envRec.CreateImportBinding(in.[[LocalName]], resolution.[[module]], resolution.[[bindingName]]).
+            CreateImportBinding.call(envRec, i['[[LocalName]]'], resolution['[[module]]'], resolution['[[bindingName]]']);
+        }
+    }
+    // 13. Let varDeclarations be the VarScopedDeclarations of code.
+    let varDeclarations = code.VarScopedDeclarations;
+    // 14. Let declaredVarNames be an empty List.
+    let declaredVarNames = [];
+    // 15. For each element d in varDeclarations do
+    for (let d of varDeclarations) {
+        // a. For each element dn of the BoundNames of d
+        for (dn of d.BoundNames) {
+            // i. If dn is not an element of declaredVarNames, then
+            if (declaredVarNames.indexOf(dn) === -1) {
+                // 1. Let status be envRec.CreateMutableBinding(dn, false).
+                CreateMutableBinding.call(envRec, dn, false);
+                // 2. Assert: status is not an abrupt completion.
+                // TODO: ignoring assertion
+                // 3. Call envRec.InitializeBinding(dn, undefined).
+                InitializeBinding.call(envRec, dn, undefined);
+                // 4. Append dn to declaredVarNames.
+                declaredVarNames.push(dn);
+            }
+        }
+    }
+    // 16. Let lexDeclarations be the LexicallyScopedDeclarations of code.
+    let lexDeclarations = code.LexicallyScopedDeclarations;
+    // 17. For each element d in lexDeclarations do
+    for (let d of lexDeclarations) {
+        // a. For each element dn of the BoundNames of d do
+        for (let dn of d.BoundNames) {
+            // i. If IsConstantDeclaration of d is true, then
+            if (d.IsConstantDeclaration === true) {
+                // 1. Let status be envRec.CreateImmutableBinding(dn, true).
+                CreateImmutableBinding.call(envRec, dn, true);
+            }
+            // ii. Else,
+            else {
+                // 1. Let status be envRec.CreateMutableBinding(dn, false).
+                CreateMutableBinding.call(envRec, dn, false);
+            }
+            // iii. Assert: status is not an abrupt completion.
+            // TODO: diverging to ignore
+            // iv. If d is a GeneratorDeclaration production or a FunctionDeclaration production, then
+            if (d.InstantiateFunctionObject || d.FunctionDeclaration) {
+                // 1. Let fo be the result of performing InstantiateFunctionObject for d with argument env.
+                let fo = InstantiateFunctionObject(d, env);
+                // 2. Call envRec.InitializeBinding(dn, fo).
+                InitializeBinding.call(envRec, dn, fo);
+            }
+        }
+    }
+    // 18. Return NormalCompletion(empty).
+    return;
 }

@@ -1,3 +1,7 @@
+import {
+    ParseModule,
+} from "./262.js";
+
 import ReflectLoader from "./3.loader.js";
 import {
     Module as nodeModule,
@@ -36,8 +40,8 @@ function createReflectiveModuleRecordFromEntry(entry) {
     }, () => {});
 }
 
-function createSourceTextModuleRecordFromEntry(entry) {
-    throw new Error('TODO');
+function createSourceTextModuleRecordFromEntry(entry, source) {
+    return ParseModule(source);
 }
 
 export default class Loader extends ReflectLoader {
@@ -50,7 +54,7 @@ export default class Loader extends ReflectLoader {
         // resolve hook
         this[ReflectLoader.resolve] = (name, referrer) => {
             if (referrer) {
-                referrer = { filename: referrer };
+                referrer = { filename: referrer, id: referrer };
             } else if (registry.has(name)) {
                 return name;
             }
@@ -59,9 +63,8 @@ export default class Loader extends ReflectLoader {
 
         // fetch hook
         this[ReflectLoader.fetch] = (entry, key) => {
-            // TODO: ignore native node modules
             // TODO: ignore cjs modules
-            return false && fs.readFileSync(key, 'utf8');
+            return  (key.indexOf('es6') !== -1 ? readFileSync(key, 'utf8') : undefined);
         };
 
         // translate hook
@@ -74,8 +77,8 @@ export default class Loader extends ReflectLoader {
         // instantiate hook
         this[ReflectLoader.instantiate] = (entry, source) => {
             if (source) {
-                // es module, we should create a source text module record
-                return createSourceTextModuleRecordFromEntry(entry, source);
+                // ignore instances source text module record
+                return undefined;
             } else {
                 // cjs module or native node module, we should run in back-compat mode
                 return createReflectiveModuleRecordFromEntry(entry);

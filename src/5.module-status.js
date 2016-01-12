@@ -5,7 +5,11 @@ import {
 } from "./262.js";
 
 import {
-    RequestReady,
+    RequestFetch,
+    RequestTranslate,
+    RequestInstantiate,
+    RequestSatisfy,
+    ExtractDependencies,
 } from './6.loading.js';
 
 import {
@@ -15,6 +19,7 @@ import {
 // TODO: remove helpers
 import {
     HowToDoThis,
+    transformPromise,
     assert,
 } from "./utils.js";
 
@@ -36,8 +41,8 @@ export function GetCurrentStage(entry) {
 export function IsValidStageValue(stage) {
     // 1. Assert: Type(stage) is String.
     assert(typeof stage === 'string', 'Type(stage) is String.');
-    // 2. If stage is "fetch", "translate", "instantiate", "satisfy", "link" or "ready", return true.
-    if (['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready'].indexOf(stage) !== -1) return true;
+    // 2. If stage is "fetch", "translate" or "instantiate", return true.
+    if (['fetch', 'translate', 'instantiate'].indexOf(stage) !== -1) return true;
     // 3. Else return false.
     else return false;
 }
@@ -81,21 +86,6 @@ export function LoadModule(entry, stage) {
     if (stage === "instantiate") {
         // a. Return the result of transforming RequestInstantiate(entry) with a new pass-through promise.
         return PassThroughPromise(RequestInstantiate(entry));
-    }
-    // 7. If stage is "satisfy", then:
-    if (stage === "satisfy") {
-        // a. Return the result of transforming RequestSatisfy(entry) with a new pass-through promise.
-        return PassThroughPromise(RequestSatisfy(entry));
-    }
-    // 8. If stage is "link", then:
-    if (stage === "link") {
-        // a. Return the result of transforming RequestLink(entry) with a new pass-through promise.
-        return PassThroughPromise(RequestLink(entry));
-    }
-    // 9. If stage is "ready", then:
-    if (stage === "ready") {
-        // a. Return the result of transforming RequestReady(entry) with a new pass-through promise.
-        return PassThroughPromise(RequestReady(entry));
     }
     // 10. Return a promise rejected with a new RangeError exception.
     return Promise.reject(new RangeError('stage'));
@@ -143,27 +133,21 @@ export default function ModuleStatus(loader, key) {
     pipeline.push({ '[[Stage]]': "translate", '[[Result]]': undefined });
     // 9. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: undefined } as a new element of the list pipeline.
     pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': undefined });
-    // 10. Add new stage entry record { [[Stage]]: "satisfy", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "satisfy", '[[Result]]': undefined });
-    // 11. Add new stage entry record { [[Stage]]: "link", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "link", '[[Result]]': undefined });
-    // 12. Add new stage entry record { [[Stage]]: "ready", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "ready", '[[Result]]': undefined });
-    // 13. Set O’s [[Loader]] internal slot to loader.
+    // 10. Set O’s [[Loader]] internal slot to loader.
     O['[[Loader]]'] = loader;
-    // 14. Set O’s [[Pipeline]] internal slot to pipeline.
+    // 11. Set O’s [[Pipeline]] internal slot to pipeline.
     O['[[Pipeline]]'] = pipeline;
-    // 15. Set O’s [[Key]] internal slot to keyString.
+    // 12. Set O’s [[Key]] internal slot to keyString.
     O['[[Key]]'] = keyString;
-    // 16. Set O’s [[Module]] internal slot to module.
+    // 13. Set O’s [[Module]] internal slot to module.
     O['[[Module]]'] = undefined;
-    // 17. Set O’s [[Metadata]] internal slot to undefined.
+    // 14. Set O’s [[Metadata]] internal slot to undefined.
     O['[[Metadata]]'] = undefined;
-    // 18. Set O’s [[Dependencies]] internal slot to undefined.
+    // 15. Set O’s [[Dependencies]] internal slot to undefined.
     O['[[Dependencies]]'] = undefined;
-    // 19. Set O’s [[Error]] internal slot to false.
+    // 16. Set O’s [[Error]] internal slot to false.
     O['[[Error]]'] = false;
-    // 20. Return O.
+    // 17. Return O.
     return O;
 }
 
@@ -313,32 +297,48 @@ ModuleStatus.prototype = {
         // TODO: diverging by ignoring the RejectIfAbrupt.
         // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
-        // 7. Let p0 be the result of transforming result with a new pass-through promise.
+        // 7. Let stageEntry be GetStage(entry, stageValue).
+        let stageEntry = GetStage(entry, stageValue);
+        // 8. If stageEntry is undefined, return a promise rejected with a new TypeError exception.
+        if (stageEntry === undefined) return Promise.reject(new TypeError());
+        // 9. Perform UpgradeToStage(entry, stageValue).
+        UpgradeToStage(entry, stageValue);
+        // 10. Let p0 be the result of transforming result with a new pass-through promise.
         let p0 = PassThroughPromise(result);
-        // 8. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
-        let p1 = p0.then((value) => {
-            // a. Let stageEntry be GetStage(entry, stageValue).
-            let stageEntry = GetStage(entry, stageValue);
-            // b. If stageEntry is undefined, throw a new TypeError.
-            if (stageEntry === undefined) throw new TypeError('missed the train');
-            // c. If stageEntry.[[Result]] is undefined, then
-            if (stageEntry['[[Result]]'] === undefined) {
-                // i. Set stageEntry.[[Result]] to a promise resolved with value.
-                stageEntry['[[Result]]'] = Promise.resolve(value);
-            // d. Else,
-            } else {
-                // i. Fulfill stageEntry.[[Result]] with value.
-                HowToDoThis('ModuleStatus.prototype.resolve', '8.d.i. Fulfill stageEntry.[[Result]] with value.');
+        // 11. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
+        let p1 = transformPromise(p0).then((value) => {
+            // If stageValue is "instantiate", then:
+            if (stageValue) {
+                // Perform ? ExtractDependencies(entry, value, undefined).
+                ExtractDependencies(entry, value, undefined);
+                // Return the result of transforming RequestSatisfy(entry, undefined) with a fulfillment handler that, when called, runs the following steps:
+                return transformPromise(RequestSatisfy(entry, undefined)).then(() => {
+                    // Let stageEntry be GetStage(entry, stageValue).
+                    let stageEntry = GetStage(entry, stageValue);
+                    // Assert: stageEntry is not undefined.
+                    assert(stageEntry !== undefined, 'stageEntry is not undefined.');
+                    // Fulfill stageEntry.[[Result]] with value.
+                    HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
+                });
             }
-            // e. Perform UpgradeToStage(entry, stageValue).
-            UpgradeToStage(entry, stageValue);
+            // Else,
+            else {
+                // Let stageEntry be GetStage(entry, stageValue).
+                let stageEntry = GetStage(entry, stageValue);
+                // If stageEntry is undefined, throw a new TypeError.
+                if (stageEntry === undefined) throw new TypeError();
+                // Fulfill stageEntry.[[Result]] with value.
+                HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
+            }
         });
-        // 9. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
-        p1.catch(() => {
+        // 12. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
+        transformPromise(p1).catch(() => {
             // a. Set entry.[[Error]] to true.
             entry['[[Error]]'] = true;
         });
-        // 10. Return p1.
+        // 13. If stageEntry.[[Result]] is undefined, set stageEntry.[[Result]] to p1.
+        if (stageEntry['[[Result]]'] === undefined) stageEntry['[[Result]]'] = p1;
+        // 14. Return p1.
         return p1;
     },
 
@@ -356,32 +356,32 @@ ModuleStatus.prototype = {
         // TODO: diverging by ignoring the RejectIfAbrupt.
         // 6. If IsValidStageValue(stageValue) is false, return a promise rejected with a new RangeError exception.
         if (!IsValidStageValue(stageValue)) return Promise.reject(new RangeError('stage out of range'));
-        // 7. Let p0 be the result of transforming error with a new pass-through promise.
+
+        // 7. Let stageEntry be GetStage(entry, stageValue).
+        let stageEntry = getStage(entry, stageValue);
+        // 8. If stageEntry is undefined, return a promise rejected with a new TypeError exception.
+        if (stageEntry === undefined) return Promise.reject(new TypeError());
+        // 9. Perform UpgradeToStage(entry, stageValue).
+        UpgradeToStage(entry, stageValue);
+        // 10. Let p0 be the result of transforming error with a new pass-through promise.
         let p0 = PassThroughPromise(error);
-        // 8. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
-        let p1 = p0.then((value) => {
+        // 11. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
+        let p1 = transformPromise(p0).then((value) => {
             // a. Let stageEntry be GetStage(entry, stageValue).
             let stageEntry = GetStage(entry, stageValue);
             // b. If stageEntry is undefined, throw a new TypeError.
             if (stageEntry === undefined) throw new TypeError('missed the train');
-            // c. If stageEntry.[[Result]] is undefined, then
-            if (stageEntry['[[Result]]'] === undefined) {
-                // i. Set stageEntry.[[Result]] to a promise resolved with value.
-                stageEntry['[[Result]]'] = Promise.reject(value);
-            // d. Else,
-            } else {
-                // i. Reject stageEntry.[[Result]] with value.
-                HowToDoThis('ModuleStatus.prototype.reject', '8.d.i. Reject stageEntry.[[Result]] with value.');
-            }
-            // e. Perform UpgradeToStage(entry, stageValue).
-            UpgradeToStage(entry, stageValue);
+            // c. Reject stageEntry.[[Result]] with value.
+            HowToDoThis('ModuleStatus.prototype.reject', '11.c Reject stageEntry.[[Result]] with value.');
         });
-        // 9. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
-        p1.catch(() => {
+        // 12. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
+        transformPromise(p1).catch(() => {
             // a. Set entry.[[Error]] to true.
             entry['[[Error]]'] = true;
         });
-        // 10. Return p1.
+        // 13. If stageEntry.[[Result]] is undefined, set stageEntry.[[Result]] to p1.
+        if (stage['[[Result]]'] === undefined) stageEntry['[[Result]]'] = p1;
+        // 14. Return p1.
         return p1;
     }
 

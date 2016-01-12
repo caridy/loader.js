@@ -1,32 +1,19 @@
 import {
     GetMethod,
     IsCallable,
-    GetModuleNamespace,
+    ParseModule,
 } from './262.js';
-
-import {
-    PassThroughPromise,
-} from './2.conventions.js';
 
 import Loader from './3.loader.js';
 
 import ModuleStatus, {
-    GetCurrentStage,
     GetStage,
     UpgradeToStage,
 } from './5.module-status.js';
 
 import {
-    Link,
-} from './7.linking.js';
-
-import {
-    ModuleEvaluation,
-} from './8.module.js';
-
-import {
     promiseCall,
-    HowToDoThis,
+    transformPromise,
     assert,
 } from './utils.js';
 
@@ -43,9 +30,9 @@ export function EnsureRegistered(loader, key) {
     // 3. Let registry be loader.[[Registry]].
     let registry = loader['[[Registry]]'];
 
-    // 4. Let pair be the entry in loader.[[Registry]] such that pair.[[key]] is equal to key.
+    // 4. Let pair be the entry in registry.[[RegistryMap]] such that pair.[[key]] is equal to key.
     let pair;
-    for (var [k, v] of loader['[[Registry]]']) {
+    for (var [k, v] of registry['[[RegistryMap]]']) {
         if (k === key) pair = {'[[key]]': k, '[[value]]': v};
     }
 
@@ -98,13 +85,13 @@ export function ExtractDependencies(entry, optionalInstance, source) {
         instance['[[ModuleStatus]]'] = entry;
         // c. For each dep in instance.[[RequestedModules]], do:
         // TODO: divering to allow dynamic modules to request dependencies as well
-        instance['[[RequestedModules]]'].forEach((dep) => {
+        for (let dep of instance['[[RequestedModules]]']) {
             // i. Append the record { [[RequestName]]: dep, [[ModuleStatus]]: undefined } to deps.
             deps.push({
                 '[[RequestName]]': dep,
                 '[[ModuleStatus]]': undefined,
             });
-        });
+        }
     }
     // 5. Set entry.[[Dependencies]] to deps.
     entry['[[Dependencies]]'] = deps;
@@ -154,14 +141,14 @@ export function RequestFetch(entry) {
     // 6. Let hookResult be the result of promise-calling hook(entry, entry.[[Key]]).
     let hookResult = promiseCall(hook, entry, entry['[[Key]]']);
     // 7. Let p be the result of transforming hookResult with a fulfillment handler that, when called with argument payload, runs the following steps:
-    let p = hookResult.then((payload) => {
+    let p = transformPromise(hookResult).then((payload) => {
         // a. Perform UpgradeToStage(entry, "translate").
         UpgradeToStage(entry, "translate");
         // b. Return payload.
         return payload;
     });
     // 8. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch(() => {
+    transformPromise(p).catch(() => {
         // a. Set entry.[[Error]] to true.
         entry['[[Error]]'] = true;
     });
@@ -182,13 +169,13 @@ export function RequestTranslate(entry) {
     // 4. If translateStageEntry.[[Result]] is not undefined, return translateStageEntry.[[Result]].
     if (translateStageEntry['[[Result]]'] !== undefined) return translateStageEntry['[[Result]]'];
     // 5. Let p be the result of transforming RequestFetch(entry) with a fulfillment handler that, when called with argument payload, runs the following steps:
-    let p = RequestFetch(entry).then((payload) => {
+    let p = transformPromise(RequestFetch(entry)).then((payload) => {
         // a. Let hook be GetMethod(entry.[[Loader]], @@translate).
         let hook = GetMethod(entry['[[Loader]]'], Loader.translate);
         // b. Let hookResult be the result of promise-calling hook(entry, payload).
         let hookResult = promiseCall(hook, entry, payload);
         // c. Return the result of transforming hookResult with a fulfillment handler that, when called with argument source, runs the following steps:
-        return hookResult.then((source) => {
+        return transformPromise(hookResult).then((source) => {
             // i. Perform UpgradeToStage(entry, "instantiate").
             UpgradeToStage(entry, "instantiate");
             // ii. Return source.
@@ -196,7 +183,7 @@ export function RequestTranslate(entry) {
         });
     });
     // 6. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch(() => {
+    transformPromise(p).catch(() => {
         // a. Set entry.[[Error]] to true.
         entry['[[Error]]'] = true;
     });
@@ -207,7 +194,7 @@ export function RequestTranslate(entry) {
 }
 
 // 6.2.3. RequestInstantiate(entry)
-export function RequestInstantiate(entry) {
+export function RequestInstantiate(entry, buckle) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. Let instantiateStageEntry be GetStage(entry, "instantiate").
@@ -217,23 +204,24 @@ export function RequestInstantiate(entry) {
     // 4. If instantiateStageEntry.[[Result]] is not undefined, return instantiateStageEntry.[[Result]].
     if (instantiateStageEntry['[[Result]]'] !== undefined) return instantiateStageEntry['[[Result]]'];
     // 5. Let p be the result of transforming RequestTranslate(entry) with a fulfillment handler that, when called with argument source, runs the following steps:
-    let p = RequestTranslate(entry).then((source) => {
+    let p = transformPromise(RequestTranslate(entry)).then((source) => {
         // a. Let hook be GetMethod(entry.[[Loader]], @@instantiate).
         let hook = GetMethod(entry['[[Loader]]'], Loader.instantiate);
         // b. Let hookResult be the result of promise-calling hook(entry, source).
         let hookResult = promiseCall(hook, entry, source);
         // c. Return the result of transforming hookResult with a fulfillment handler that, when called with argument optionalInstance, runs the following steps:
-        return hookResult.then((optionalInstance) => {
+        return transformPromise(hookResult).then((optionalInstance) => {
             // i. Perform ? ExtractDependencies(entry, optionalInstance, source).
             ExtractDependencies(entry, optionalInstance, source);
-            // ii. Perform UpgradeToStage(entry, "satisfy").
-            UpgradeToStage(entry, "satisfy");
-            // iii. 1. Return optionalInstance.
-            return optionalInstance;
+            // ii. Return the result of transforming RequestSatisfy(entry, buckle) with a fulfillment handler that, when called, runs the following steps:
+            return transformPromise(RequestSatisfy(entry, buckle)).then(() => {
+                // 1. Return optionalInstance.
+                return optionalInstance;
+            });
         });
     });
     // 6. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch((e) => {
+    transformPromise(p).catch(() => {
         // a. Set entry.[[Error]] to true.
         entry['[[Error]]'] = true;
     });
@@ -243,115 +231,38 @@ export function RequestInstantiate(entry) {
     return p;
 }
 
-// 6.2.4. RequestSatisfy(entry)
-export function RequestSatisfy(entry) {
+// 6.2.4. RequestSatisfy(entry, buckle)
+export function RequestSatisfy(entry, buckle) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
-    // 2. Let satisfyStageEntry be GetStage(entry, "satisfy").
-    let satisfyStageEntry = GetStage(entry, "satisfy");
-    // 3. If satisfyStageEntry is undefined, return a promise resolved with undefined.
-    if (satisfyStageEntry === undefined) return Promise.resolve();
-    // 4. If satisfyStageEntry.[[Result]] is not undefined, return satisfyStageEntry.[[Result]].
-    if (satisfyStageEntry['[[Result]]'] !== undefined) return satisfyStageEntry['[[Result]]'];
-    // 5. Let p be the result of transforming RequestInstantiate(entry) with a fulfillment handler that, when called, runs the following steps:
-    let p = RequestInstantiate(entry).then((TODO_optionalInstance_instead_of_entry) => {
-        // a. Let depLoads be a new empty List.
-        let depLoads = [];
-        // b. For each pair in entry.[[Dependencies]], do:
-        entry['[[Dependencies]]'].forEach((pair) => {
-            // i. Let pp be the result of transforming Resolve(loader, pair.[[RequestName]], entry.[[Key]]) with a fulfillment handler that, when called with value depKey, runs the following steps:
-            let pp = Resolve(loader, pair['[[RequestName]]'], entry['[[Key]]']).then((depKey) => {
-                // 1. Let depEntry be EnsureRegistered(entry.[[Loader]], depKey).
-                let depEntry = EnsureRegistered(entry['[[Loader]]'], depKey);
-                // 2. Set pair.[[ModuleStatus]] to depEntry.
-                pair['[[ModuleStatus]]'] = depEntry;
-                // 3. Let currentStageEntry be GetCurrentStage(entry).
-                let currentStageEntry = GetCurrentStage(entry);
-                // 4. If currentStageEntry.[[Stage]] is "ready", return undefined.
-                if (currentStageEntry['[[Stage]]'] === "ready") return undefined;
-                // 5. Return RequestSatisfy(depEntry).
-                return RequestSatisfy(depEntry);
-            });
-            // ii. Append pp to depLoads.
-            depLoads.push(pp);
+    // 2. If buckle is undefined, Set buckle is a new empty List.
+    if (buckle === undefined) buckle = [];
+    // 3. If entry is already in buckle, return undefined.
+    if (buckle.indexOf(entry) !== -1) return undefined;
+    // 4. Append entry to buckle.
+    buckle.push(entry);
+    // 5. Let list be a new empty List.
+    let list = [];
+    // 6. Let loader be entry.[[Loader]].
+    let loader = entry['[[Loader]]'];
+    // 7. For each pair in entry.[[Dependencies]], do:
+    for (let pair of entry['[[Dependencies]]']) {
+        // a. Let p be the result of transforming Resolve(loader, pair.[[RequestName]], entry.[[Key]]) with a fulfillment handler that, when called with value depKey, runs the following steps:
+        let p = transformPromise(Resolve(loader, pair['[[RequestName]]'], entry['[[Key]]'])).then((depKey) => {
+            // i. Let depEntry be EnsureRegistered(loader, depKey).
+            let depEntry = EnsureRegistered(loader, depKey);
+            // ii. If depEntry is already in buckle, return undefined.
+            if (buckle.indexOf(depEntry) !== -1) return undefined;
+            // iii. Append depEntry to buckle.
+            buckle.push(depEntry);
+            // iv. Set pair.[[ModuleStatus]] to depEntry.
+            pair['[[ModuleStatus]]'] = depEntry;
+            // v. Return RequestInstantiate(depEntry, buckle).
+            return RequestInstantiate(depEntry, buckle);
         });
-        // c. Return the result of waiting for all depLoads with a fulfillment handler that, when called, runs the following steps:
-        return Promise.all(depLoads).then(() => {
-            // i. UpgradeToStage(entry, "link").
-            UpgradeToStage(entry, "link");
-            // ii. Return undefined.
-            return undefined;
-        });
-    });
-    // 6. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch(() => {
-        // a. Set entry.[[Error]] to true.
-        entry['[[Error]]'] = true;
-    });
-    // 7. Set satisfyStageEntry.[[Result]] to p.
-    satisfyStageEntry['[[Result]]'] = p;
-    // 8. Return p.
-    return p;
-}
-
-// 6.2.5. RequestLink(entry)
-export function RequestLink(entry) {
-    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
-    // 2. Let linkStageEntry be GetStage(entry, "link").
-    let linkStageEntry = GetStage(entry, "link");
-    // 3. If linkStageEntry is undefined, return a promise resolved with undefined.
-    if (linkStageEntry === undefined) return Promise.resolve();
-    // 4. If linkStageEntry.[[Result]] is not undefined, return linkStageEntry.[[Result]].
-    if (linkStageEntry['[[Result]]'] !== undefined) return linkStageEntry['[[Result]]'];
-    // 5. Let p be the result of transforming RequestSatisfy(entry) with a fulfillment handler that, when called, runs the following steps:
-    let p = RequestSatisfy(entry).then(() => {
-        // a. Assert: entry’s whole dependency graph is in "link" or "ready" stage.
-        HowToDoThis('6.2.5. RequestLink(entry)', '5.a. Assert: entry’s whole dependency graph is in "link" or "ready" stage.');
-        // b. Perform ? Link(entry).
-        Link(entry);
-        // c. Assert: entry’s whole dependency graph is in "ready" stage.
-        HowToDoThis('6.2.5. RequestLink(entry)', '5.c. Assert: entry’s whole dependency graph is in "ready" stage.');
-        // d. Return undefined.
-        return undefined;
-    });
-    // 6. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch(() => {
-        // a. Set entry.[[Error]] to true.
-        entry['[[Error]]'] = true;
-    });
-    // 7. Set linkStageEntry.[[Result]] to p.
-    linkStageEntry['[[Result]]'] = p;
-    // 8. Return p.
-    return p;
-}
-
-// 6.2.6. RequestReady(entry)
-export function RequestReady(entry) {
-    // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
-    // 2. Let readyStageEntry be GetStage(entry, "ready").
-    let readyStageEntry = GetStage(entry, "ready");
-    // 3. Assert: readyStageEntry is not undefined. currentStageEntry.[[Result]].
-    assert(readyStageEntry, 'readyStageEntry is not undefined.');
-    // 4. If readyStageEntry.[[Result]] is not undefined, return readyStageEntry.[[Result]].
-    if (readyStageEntry['[[Result]]'] !== undefined) return readyStageEntry['[[Result]]'];
-    // 5. Let p be the result of transforming RequestLink(entry) with a fulfillment handler that, when called, runs the following steps:
-    let p = RequestLink(entry).then(() => {
-        // a. Let module be entry.[[Module]].
-        let module = entry['[[Module]]'];
-        // b. Perform ? module.ModuleEvaluation().
-        ModuleEvaluation.call(module);
-        // c. Return ? GetModuleNamespace(module).
-        return GetModuleNamespace(module);
-    });
-    // 6. Let pCatch be the result of transforming p with a rejection handler that, when called, runs the following steps:
-    p.catch(() => {
-        // a. Set entry.[[Error]] to true.
-        entry['[[Error]]'] = true;
-    });
-    // 7. Set readyStageEntry.[[Result]] to p.
-    readyStageEntry['[[Result]]'] = p;
-    // 8. Return p.
-    return p;
+        // b. Append p to list.
+        list.push(p);
+    }
+    // 8. Return the result of waiting for all list.
+    return Promise.all(list);
 }

@@ -65,5 +65,8 @@
     "test:unit:cov": "babel-node $(npm bin)/isparta cover --report text --report html node_modules/mocha/bin/_mocha -- --recursive test/unit/",
     "test": "npm run test:unit",
     "prepublish": "npm run lint && npm run clean && npm run build && npm test"
+  },
+  "dependencies": {
+    "babel-core": "^6.4.0"
   }
 }

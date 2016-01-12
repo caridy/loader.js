@@ -11,6 +11,10 @@ import {
     ToString,
 } from './262.js';
 
+import {
+    EnsureEvaluated,
+} from "./7.linking.js";
+
 // TODO: remove helpers
 import {
     HowToDoThis,
@@ -163,15 +167,15 @@ export function GetExportNames(exportStarStack) {
     // 2. Let exports be a new empty List.
     let exports = [];
     // 3. For each name in module.[[LocalExports]], do:
-    module['[[LocalExports]]'].forEach((name) => {
+    for (let name of module['[[LocalExports]]']) {
         // a. Append name to exports.
         exports.push(name);
-    });
+    }
     // 4. For each pair in module.[[IndirectExports]], do:
-    module['[[IndirectExports]]'].forEach((pair) => {
+    for (let pair of module['[[IndirectExports]]']) {
         // a. Append pair.[[Key]] to exports.
         exports.push(pair['[[Key]]']);
-    });
+    }
     // 5. Return exports.
     return exports;
 }
@@ -194,23 +198,21 @@ export function ResolveExport(exportName, resolveStack, exportStarStack) {
     });
     // 4. Let localExports be module.[[LocalExports]].
     let localExports = module['[[LocalExports]]'];
-    // 5. Let localPair be the pair in localExports such that pair.[[Key]] is equal to exportName.
-    let localPair = localExports.find((pair) => pair['[[Key]]'] === exportName);
-    // 6. If localPair is defined, then:
-    if (localPair) {
+    // 5. If exportName is in localExports, then:
+    if (localExports.indexOf(exportName) !== -1) {
         // a. Return the Record { [[module]]: module, [[bindingName]]: exportName }.
         return {
             '[[module]]': module,
             '[[bindingName]]': exportName
         };
     }
-    // 7. Let indirectExports be module.[[IndirectExports]].
+    // 6. Let indirectExports be module.[[IndirectExports]].
     let indirectExports = module['[[IndirectExports]]'];
-    // 8. Let pair be the pair in indirectExports such that pair.[[Key]] is equal to exportName.
+    // 7. Let pair be the pair in indirectExports such that pair.[[Key]] is equal to exportName.
     let pair = indirectExports.find((pair) => pair['[[Key]]'] === exportName);
-    // 9. If pair is defined, return pair.[[Value]].
+    // 8. If pair is defined, return pair.[[Value]].
     if (pair) return pair['[[Value]]'];
-    // 10. Return null.
+    // 9. Return null.
     return null;
 }
 
@@ -237,7 +239,7 @@ export function ModuleEvaluation() {
         // a. Assert: requiredModule is a Module Record.
         assert('[[Namespace]]' in requiredModule, 'requiredModule is a Module Record.');
         // b. Perform ? requiredModule.ModuleEvaluation().
-        ModuleEvaluation.call(requiredModule);
+        requiredModule.ModuleEvaluation();
     }
     // 7. If IsCallable(func) is true, then:
     if (IsCallable(func) === true) {
@@ -290,7 +292,7 @@ export default function Module(descriptors, executor, evaluate) {
                 requestedModules.push(otherMod);
             }
             // iii. Let resolution be ? otherMod.ResolveExport(desc.[[Import]], « »).
-            let resolution = ResolveExport.call(otherMod, desc['[[Import]]']);
+            let resolution = otherMod.ResolveExport(desc['[[Import]]'], []);
             // iv. If resolution is null, then throw a SyntaxError exception.
             if (resolution === null) {
                 throw new SyntaxError();
@@ -338,6 +340,11 @@ export default function Module(descriptors, executor, evaluate) {
         '[[RequestedModules]]': requestedModules,
         '[[Evaluated]]': false,
         '[[Evaluate]]': evaluate,
+        // wiring up concrete implementations
+        GetExportedNames,
+        ModuleDeclarationInstantiation,
+        ModuleEvaluation,
+        ResolveExport,
     };
     // 13. Let ns be ModuleNamespaceCreate(mod, realm, exportNames).
     // TODO: deviated from spec, `realm` is not needed in this call
@@ -360,8 +367,22 @@ export default function Module(descriptors, executor, evaluate) {
 // 8.4. Properties of the Module Constructor
 Module.prototype.constructor = Module;
 
-// 8.4.1. Module.evaluate(m)
-Module.evaluate = function (m) {
-    throw new Error('TODO');
-    // TODO: way to force evaluation of a module namespace exotic object (Reflect.Module.evaluate(m)? m[Reflect.Module.evaluate]()?)
+// 8.4.1. Module.evaluate(ns)
+Module.evaluate = function (ns) {
+    // 1. If ns is not a module namespace exotic object, throw a TypeError exception.
+    if (!('[[Module]]' in ns)) throw new TypeError();
+    // 2. Let module be ns.[[Module]].
+    let module = ns['[[Module]]'];
+    // 3. Let entry be module.[[Entry]].
+    let entry = module['[[Entry]]'];
+    // 4. Let status be EnsureEvaluated(entry).
+    let status = EnsureEvaluated(entry);
+    // 5. RejectIfAbrupt(status);
+    // TODO: diverging by ignoring the RejectIfAbrupt.
+    // 6. Return a promise resolved with true.
+    return Promise.resolve(true);
 };
+
+export function GetExportedNames() {
+    return undefined;
+}

@@ -5,3 +5,5 @@ let Reflect = {
     Module,
     Loader,
 };
+
+export default Reflect;
