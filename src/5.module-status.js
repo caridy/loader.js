@@ -113,8 +113,8 @@ export function UpgradeToStage(entry, stage) {
 
 // 5.2. The ModuleStatus Constructor
 
-// 5.2.1. ModuleStatus(loader, key)
-export default function ModuleStatus(loader, key) {
+// 5.2.1. ModuleStatus(loader, key, ns)
+export default function ModuleStatus(loader, key, ns) {
     // 1. If NewTarget is undefined, then throw a TypeError exception.
     HowToDoThis('ModuleStatus', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. If Type(loader) is not Object, throw a TypeError exception.
@@ -127,27 +127,52 @@ export default function ModuleStatus(loader, key) {
     let O = OrdinaryCreateFromConstructor(ModuleStatus, "%ModuleStatusPrototype%", ['[[Loader]]', '[[Pipeline]]', '[[Key]]', '[[Module]]', '[[Metadata]]', '[[Dependencies]]', '[[Error]]']);
     // 6. Let pipeline be a new List.
     let pipeline = [];
-    // 7. Add new stage entry record { [[Stage]]: "fetch", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "fetch", '[[Result]]': undefined });
-    // 8. Add new stage entry record { [[Stage]]: "translate", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "translate", '[[Result]]': undefined });
-    // 9. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: undefined } as a new element of the list pipeline.
-    pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': undefined });
-    // 10. Set O’s [[Loader]] internal slot to loader.
+    // 7. If ns is undefined, then:
+    let module, deps;
+    if (ns === undefined) {
+        // a. Let module be undefined
+        module = undefined;
+        // b. Let deps be undefined.
+        deps = undefined;
+        // c. Add new stage entry record { [[Stage]]: "fetch", [[Result]]: undefined } as a new element of the list pipeline.
+        pipeline.push({ '[[Stage]]': "fetch", '[[Result]]': undefined });
+        // d. Add new stage entry record { [[Stage]]: "translate", [[Result]]: undefined } as a new element of the list pipeline.
+        pipeline.push({ '[[Stage]]': "translate", '[[Result]]': undefined });
+        // e. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: undefined } as a new element of the list pipeline.
+        pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': undefined });
+    }
+    // 8. Else,
+    else {
+        // a. If ns is not a module namespace exotic object, throw a TypeError exception.
+        if (!('[[Module]]' in ns)) throw new TypeError();
+        // b. Let module be ns.[[Module]].
+        module = ns['[[Module]]'];
+        // c. Let deps be a new empty List.
+        deps = [];
+        // d. Assert: module is a Module Record.
+        assert('[[Namespace]]' in module, 'module is a Module Record.');
+        // e. Assert: All [[RequestedModule]] of module are safistied.
+        // TODO: assert('All [[RequestedModule]] of module are safistied.');
+        // f. Let result be a promise resolved with ns.
+        let result = Promise.resolve(ns);
+        // g. Add new stage entry record { [[Stage]]: "instantiate", [[Result]]: result } as a new element of the list pipeline.
+        pipeline.push({ '[[Stage]]': "instantiate", '[[Result]]': result });
+    }
+    // 9. Set O’s [[Loader]] internal slot to loader.
     O['[[Loader]]'] = loader;
-    // 11. Set O’s [[Pipeline]] internal slot to pipeline.
+    // 10. Set O’s [[Pipeline]] internal slot to pipeline.
     O['[[Pipeline]]'] = pipeline;
-    // 12. Set O’s [[Key]] internal slot to keyString.
+    // 11. Set O’s [[Key]] internal slot to keyString.
     O['[[Key]]'] = keyString;
-    // 13. Set O’s [[Module]] internal slot to module.
-    O['[[Module]]'] = undefined;
-    // 14. Set O’s [[Metadata]] internal slot to undefined.
+    // 12. Set O’s [[Module]] internal slot to module.
+    O['[[Module]]'] = module;
+    // 13. Set O’s [[Metadata]] internal slot to undefined.
     O['[[Metadata]]'] = undefined;
-    // 15. Set O’s [[Dependencies]] internal slot to undefined.
-    O['[[Dependencies]]'] = undefined;
-    // 16. Set O’s [[Error]] internal slot to false.
+    // 14. Set O’s [[Dependencies]] internal slot to undefined.
+    O['[[Dependencies]]'] = deps;
+    // 15. Set O’s [[Error]] internal slot to false.
     O['[[Error]]'] = false;
-    // 17. Return O.
+    // 16. Return O.
     return O;
 }
 
@@ -307,27 +332,27 @@ ModuleStatus.prototype = {
         let p0 = PassThroughPromise(result);
         // 11. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
         let p1 = transformPromise(p0).then((value) => {
-            // If stageValue is "instantiate", then:
+            // a. If stageValue is "instantiate", then:
             if (stageValue) {
-                // Perform ? ExtractDependencies(entry, value, undefined).
-                ExtractDependencies(entry, value, undefined);
-                // Return the result of transforming RequestSatisfy(entry, undefined) with a fulfillment handler that, when called, runs the following steps:
-                return transformPromise(RequestSatisfy(entry, undefined)).then(() => {
-                    // Let stageEntry be GetStage(entry, stageValue).
+                // i. Return the result of transforming SatisfyInstance(entry, value, undefined, undefined) with a fulfillment handler that, when called with value instance, runs the following steps:
+                return transformPromise(SatisfyInstance(entry, value, undefined, undefined)).then((instance) => {
+                    // 1. Set entry.[[Module]] to instance.
+                    entry['[[Module]]'] = instance;
+                    // 2. Let stageEntry be GetStage(entry, stageValue).
                     let stageEntry = GetStage(entry, stageValue);
-                    // Assert: stageEntry is not undefined.
+                    // 3. Assert: stageEntry is not undefined.
                     assert(stageEntry !== undefined, 'stageEntry is not undefined.');
-                    // Fulfill stageEntry.[[Result]] with value.
+                    // 4. Fulfill stageEntry.[[Result]] with value.
                     HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
                 });
             }
-            // Else,
+            // b. Else,
             else {
-                // Let stageEntry be GetStage(entry, stageValue).
+                // i. Let stageEntry be GetStage(entry, stageValue).
                 let stageEntry = GetStage(entry, stageValue);
-                // If stageEntry is undefined, throw a new TypeError.
+                // ii. If stageEntry is undefined, throw a new TypeError.
                 if (stageEntry === undefined) throw new TypeError();
-                // Fulfill stageEntry.[[Result]] with value.
+                // iii. Fulfill stageEntry.[[Result]] with value.
                 HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
             }
         });

@@ -1,7 +1,3 @@
-import {
-    ParseModule,
-} from "./262.js";
-
 import ReflectLoader from "./3.loader.js";
 import {
     Module as nodeModule,
@@ -59,21 +55,22 @@ export default class Loader extends ReflectLoader {
 
         // fetch hook
         this[ReflectLoader.fetch] = (entry, key) => {
-            // TODO: ignore cjs modules
+            // only reading file from disk if the module is identified as es6 module
+            // TODO: improve detection, for now just using a filename token match
             return  (key.indexOf('es6') !== -1 ? readFileSync(key, 'utf8') : undefined);
         };
 
         // translate hook
         this[ReflectLoader.translate] = (entry, payload) => {
-            // TODO: ignore native node modules
-            // TODO: ignore cjs modules
+            // dummy translation to string.
             return payload && payload.toString();
         };
 
         // instantiate hook
         this[ReflectLoader.instantiate] = (entry, source) => {
             if (source) {
-                // ignore instances source text module record
+                // return no instance, in which case an instance of source text
+                // module record will be created
                 return undefined;
             } else {
                 // cjs module or native node module, we should run in back-compat mode
@@ -86,16 +83,15 @@ export default class Loader extends ReflectLoader {
 }
 /*
 
-* If module doesn't have a referrer, it is a top Module and should be considered an ES Module
 * ES Modules can invoke require() as a normal global from the runtime, does require calls will work sync as they do in node today
 * ES Modules can import a CJS module.
 * Resolve will delegate to npm resolution logic but it should take into consideration package.json esnext:main to detect whether or not the imported module is ES Module
-* For non-ES Modules fetch will run the underlaying sync mechanism
+* For non-ES Modules fetch does nothing.
 * For non-ES Modules translate does nothing
-* For non-ES Module instantiate just create a new dynamic module which mutator extends the cached `export` with a bunch of getters and setters.
-* For ES Modules fetch reads the file from disk.
-* For ES Modules translate does transformations and store some metadata about the internals of the source text
-* For ES Modules instantiate create a new source text module record
+* For non-ES Module instantiate just create a new dynamic module which mutator that extends the cached `export` with a bunch of getters and setters.
+* For ES Modules fetch reads file from disk to produce the payload.
+* For ES Modules translate does nothing.
+* For ES Modules instantiate does nothing, which means a new source text module record will be created internally from the `payload` produced by fetch hook.
 * Only CJS modules imported by an ES6 module will make it into the loader registry.
 
 */

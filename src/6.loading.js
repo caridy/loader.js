@@ -67,61 +67,45 @@ export function Resolve(loader, name, referrer) {
     return promiseCall(hook, name, referrer);
 }
 
-// 6.1.3. ExtractDependencies(entry, optionalInstance, source)
-export function ExtractDependencies(entry, optionalInstance, source) {
+// 6.1.3. ExtractDependencies(entry, instance)
+export function ExtractDependencies(entry, instance) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
-    // 2. Let instance be ? Instantiation(entry.[[Loader]], optionalInstance, source).
-    let instance = Instantiation(entry['[[Loader]]'], optionalInstance, source);
-    // 3. Let deps be a new empty List.
+    // 2. Let deps be a new empty List.
     let deps = [];
-    // 4. If instance is a Module Record, then:
+    // 3. If instance is a Module Record, then:
     if ('[[Namespace]]' in instance) {
-        // a. Assert: instance is a Source Text Module Record.
-        // TODO: diverging from spec because not only source text module records
-        // can have dependencies.
-        // assert('[[ECMAScriptCode]]' in instance, 'instance is a Source Text Module Record.');
-        // b. Set instance.[[ModuleStatus]] to entry.
+        // a. Set instance.[[ModuleStatus]] to entry.
         instance['[[ModuleStatus]]'] = entry;
-        // c. For each dep in instance.[[RequestedModules]], do:
-        // TODO: divering to allow dynamic modules to request dependencies as well
-        for (let dep of instance['[[RequestedModules]]']) {
-            // i. Append the record { [[RequestName]]: dep, [[ModuleStatus]]: undefined } to deps.
-            deps.push({
-                '[[RequestName]]': dep,
-                '[[ModuleStatus]]': undefined,
-            });
+        // b. If instance is a Source Text Module Record, then:
+        if ('[[ECMAScriptCode]]' in instance) {
+            // i. For each dep in instance.[[RequestedModules]], do:
+            for (let dep of instance['[[RequestedModules]]']) {
+                // 1. Append the record { [[RequestName]]: dep, [[ModuleStatus]]: undefined } to deps.
+                deps.push({
+                    '[[RequestName]]': dep,
+                    '[[ModuleStatus]]': undefined,
+                });
+            }
         }
     }
-    // 5. Set entry.[[Dependencies]] to deps.
+    // 4. Set entry.[[Dependencies]] to deps.
     entry['[[Dependencies]]'] = deps;
-    // 6. Set entry.[[Module]] to instance.
-    entry['[[Module]]'] = instance;
 }
 
-// 6.1.4. Instantiation(loader, result, source)
-export function Instantiation(loader, result, source) {
-    // 1. Assert: loader must have all of the internal slots of a Loader Instance (3.5).
-    assert('[[Registry]]' in loader, 'loader must have all of the internal slots of a Loader Instance (3.5).');
-    // 2. If result is undefined, return ParseModule(source).
-    // TODO: Divering from the spec to support all kind of optionalInstance
-    if (result === undefined) {
-        result = ParseModule(source);
+// 6.1.4. Instantiation(optionalInstance, source)
+export function Instantiation(optionalInstance, source) {
+    // 1. If optionalInstance is undefined, then:
+    if (optionalInstance === undefined) {
+        // If source is a ECMAScript source text, return ? ParseModule(source); otherwise throw new TypeError.
+        if (typeof source === 'string') return ParseModule(source); else throw new TypeError();
     }
-    else if ('[[Module]]' in result) {
-        result = result['[[Module]]'];
-    }
-    else if (!IsCallable(result)) {
-        throw new TypeError();
-    }
-    // 3. If IsCallable(result) is false then throw a new TypeError.
-    // TODO: if (IsCallable(result) === false) throw new TypeError('result most be callable');
-    //       it seems that result is an exotic object that is not callable
-    // 4. Set result.[[Realm]] to loader.[[Realm]].
-    // TODO: diverging from the spec, there might not be an issue with Realm after all
-    // result['[[Realm]]'] = loader['[[Realm]]'];
-    // 5. Return result.
-    return result;
+    // 2. If optionalInstance is a namespace exotic object, return optionalInstance.[[Module]].
+    if ('[[Module]]' in optionalInstance) return optionalInstance['[[Module]]'];
+    // 3. If IsCallable(optionalInstance) is false then throw a new TypeError.
+    if (IsCallable(optionalInstance) === false) throw new TypeError();
+    // 4. Return optionalInstance.
+    return optionalInstance;
 }
 
 // 6.2. Loading Operations
@@ -211,10 +195,10 @@ export function RequestInstantiate(entry, buckle) {
         let hookResult = promiseCall(hook, entry, source);
         // c. Return the result of transforming hookResult with a fulfillment handler that, when called with argument optionalInstance, runs the following steps:
         return transformPromise(hookResult).then((optionalInstance) => {
-            // i. Perform ? ExtractDependencies(entry, optionalInstance, source).
-            ExtractDependencies(entry, optionalInstance, source);
-            // ii. Return the result of transforming RequestSatisfy(entry, buckle) with a fulfillment handler that, when called, runs the following steps:
-            return transformPromise(RequestSatisfy(entry, buckle)).then(() => {
+            // i1. Return the result of transforming SatisfyInstance(entry, optionalInstance, source, buckle) with a fulfillment handler that, when called with value instance, runs the following steps:
+            return transformPromise(SatisfyInstance(entry, optionalInstance, source, buckle)).then((instance) => {
+                // 1. Set entry.[[Module]] to instance.
+                entry['[[Module]]'] = instance;
                 // 1. Return optionalInstance.
                 return optionalInstance;
             });
@@ -231,8 +215,8 @@ export function RequestInstantiate(entry, buckle) {
     return p;
 }
 
-// 6.2.4. RequestSatisfy(entry, buckle)
-export function RequestSatisfy(entry, buckle) {
+// 6.2.4. SatisfyInstance(entry, optionalInstance, source, buckle)
+export function SatisfyInstance(entry, optionalInstance, source, buckle) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');
     // 2. If buckle is undefined, Set buckle is a new empty List.
@@ -241,11 +225,15 @@ export function RequestSatisfy(entry, buckle) {
     if (buckle.indexOf(entry) !== -1) return undefined;
     // 4. Append entry to buckle.
     buckle.push(entry);
-    // 5. Let list be a new empty List.
-    let list = [];
-    // 6. Let loader be entry.[[Loader]].
+    // 5. Let loader be entry.[[Loader]].
     let loader = entry['[[Loader]]'];
-    // 7. For each pair in entry.[[Dependencies]], do:
+    // 6. Let instance be ? Instantiation(optionalInstance, source).
+    let instance = Instantiation(optionalInstance, source);
+    // 7. Perform ? ExtractDependencies(entry, instance).
+    ExtractDependencies(entry, instance);
+    // 8. Let list be a new empty List.
+    let list = [];
+    // 9. For each pair in entry.[[Dependencies]], do:
     for (let pair of entry['[[Dependencies]]']) {
         // a. Let p be the result of transforming Resolve(loader, pair.[[RequestName]], entry.[[Key]]) with a fulfillment handler that, when called with value depKey, runs the following steps:
         let p = transformPromise(Resolve(loader, pair['[[RequestName]]'], entry['[[Key]]'])).then((depKey) => {
@@ -254,7 +242,7 @@ export function RequestSatisfy(entry, buckle) {
             // ii. If depEntry is already in buckle, return undefined.
             if (buckle.indexOf(depEntry) !== -1) return undefined;
             // iii. Append depEntry to buckle.
-            buckle.push(depEntry);
+            // buckle.push(depEntry);
             // iv. Set pair.[[ModuleStatus]] to depEntry.
             pair['[[ModuleStatus]]'] = depEntry;
             // v. Return RequestInstantiate(depEntry, buckle).
@@ -263,6 +251,6 @@ export function RequestSatisfy(entry, buckle) {
         // b. Append p to list.
         list.push(p);
     }
-    // 8. Return the result of waiting for all list.
-    return Promise.all(list);
+    // 10. Return the result of waiting for all list.
+    return Promise.all(list).then(() => instance);
 }
