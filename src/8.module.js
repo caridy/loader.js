@@ -256,7 +256,7 @@ export function ModuleEvaluation() {
 // 8.3.1. Module(descriptors[, executor[, evaluate]])
 export default function Module(descriptors, executor, evaluate) {
     // 1. Let realm be the current Realm.
-    let realm = Object.create(null);
+    let realm = EnvECMAScriptCurrentRealm();
     // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
     let env = NewModuleEnvironment(realm['[[globalEnv]]']);
     // 3. If Type(descriptors) is not Object, throw a TypeError exception.
@@ -277,7 +277,7 @@ export default function Module(descriptors, executor, evaluate) {
     envRec['[[$InitializeBinding]]'] = [];
     envRec['[[$MutableBinding]]'] = [];
     // 10. For each desc in exportDescriptors, do:
-    for (var desc of exportDescriptors) {
+    for (let desc of exportDescriptors) {
         // a. Let exportName be desc.[[Name]].
         let exportName = desc['[[Name]]'];
         // b. Append exportName to exportNames.

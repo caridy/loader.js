@@ -61,7 +61,7 @@ export function GetModuleNamespace(module) {
         // b. Let unambiguousNames be a new empty List.
         let unambiguousNames = [];
         // c. For each name that is an element of exportedNames,
-        for (var name in exportedNames) {
+        for (let name of exportedNames) {
             // i. Let resolution be ? module.ResolveExport(name, « », « »).
             let resolution = module.ResolveExport(name, [], []);
             // ii. If resolution is null, throw a SyntaxError exception.
@@ -137,10 +137,11 @@ export function NewModuleEnvironment (E) {
     let envRec = Object.create(null);
     // TODO: diverging from spec to track initialized bindings
     envRec['[[$InitializeBinding]]'] = [];
+    envRec['[[$MutableBinding]]'] = [];
     // 3. Set env's EnvironmentRecord to be envRec.
     env['[[EnvironmentRecord]]'] = envRec;
     // 4. Set the outer lexical environment reference of env to E.
-    env['outer lexical environment'] = E;
+    Object.setPrototypeOf(envRec, E);
     // 5. Return env.
     return env;
 }
@@ -158,7 +159,7 @@ export function ModuleNamespaceCreate (module, exports) {
     // 5. Set M's essential internal methods to the definitions specified in 9.4.6.
     // - 262 spec expando:
     {
-        // 9.4.6 Module Namespace Exotic Objects
+        // 9.4.6.x Module Namespace Exotic Objects
         // note: this block is suppose to control the internal slots used by the engine
         // to discover the internals of the namespace object, this includes:
         // [[GetPrototypeOf]] ( )
@@ -189,20 +190,42 @@ export function ModuleNamespaceCreate (module, exports) {
     Object.defineProperty(M, '[[Exports]]', { value: exports, configurable: false, enumerable: false });
 
     // 8. Create own properties of M corresponding to the definitions in 26.3.
-    // TODO: diverging from spec since this is not very clear in the spec, it is more like freestyle
-    let envRec = module['[[Environment]]']['[[EnvironmentRecord]]'];
-    exports.forEach((name) => {
-        Object.defineProperty(M, name, {
-            get: () => envRec[name],
-            set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
-            enumerable: true,
-            configurable: false
-        });
-    });
-    // - 262 spec expando:
+    // - spec expando on step 8:
     {
         // http://tc39.github.io/ecma262/#sec-module-namespace-objects
         // 26.3 Module Namespace Objects
+        {
+            // - spec expando on step 26.3:
+            // 9.4.6 Module Namespace Exotic Objects
+            // A module namespace object is an exotic object that exposes the bindings exported from an ECMAScript Module (See 15.2.3). There is a one-to-one correspondence between the String-keyed own properties of a module namespace exotic object and the binding names exported by the Module. The exported bindings include any bindings that are indirectly exported using export * export items. Each String-valued own property key is the StringValue of the corresponding exported binding name. These are the only String-keyed properties of a module namespace exotic object. Each such property has the attributes {[[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: false}. Module namespace objects are not extensible.
+            let envRec = module['[[Environment]]']['[[EnvironmentRecord]]'];
+            exports.forEach((name) => {
+                let localName = (name === 'default' ? '$default$' : name);
+                if (Object.getOwnPropertyDescriptor(envRec, localName) === undefined) {
+                    // indirect exports
+                    let resolution = module.ResolveExport(name, [], []);
+                    assert(resolution !== null && resolution !== 'ambiguous');
+                    let importedModule = resolution['[[module]]'];
+                    let importedEnvRec = importedModule['[[Environment]]']['[[EnvironmentRecord]]'];
+                    let importedName = resolution['[[bindingName]]'];
+                    if (importedName === 'default') importedName = '$default$';
+                    Object.defineProperty(M, name, {
+                        get: () => importedEnvRec[importedName],
+                        set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
+                        enumerable: true,
+                        configurable: false
+                    });
+                } else {
+                    // local exports
+                    Object.defineProperty(M, name, {
+                        get: () => envRec[localName],
+                        set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
+                        enumerable: true,
+                        configurable: false
+                    });
+                }
+            });
+        };
         // 26.3.1 @@toStringTag
         Object.defineProperty(M, Symbol.toStringTag, {
             value: 'Module',
@@ -276,6 +299,30 @@ export function InitializeBinding (N, V) {
     // 4. Record that the binding for N in envRec has been initialized.
     envRec['[[$InitializeBinding]]'].push(N);
     // 5. Return NormalCompletion(empty).
+    return;
+}
+
+// 8.1.1.5.5 CreateImportBinding (N, M, N2)
+export function CreateImportBinding (N, M, N2) {
+    // 1. Let envRec be the module Environment Record for which the method was invoked.
+    let envRec = this;
+    // 2. Assert: envRec does not already have a binding for N.
+    assert(!(N in envRec), 'envRec does not already have a binding for N.');
+    // 3. Assert: M is a Module Record.
+    assert('[[Namespace]]' in M, 'M is a Module Record.');
+    // 4. Assert: When M.[[Environment]] is instantiated it will have a direct binding for N2.
+    assert(M['[[Environment]]'] === undefined || Object.getOwnPropertyDescriptor(M['[[Environment]]']['[[EnvironmentRecord]]'], N2) !== undefined, 'When M.[[Environment]] is instantiated it will have a direct binding for N2.');
+    // 5. Create an immutable indirect binding in envRec for N that references M and N2 as its target binding and record that the binding is initialized.
+    Object.defineProperty(envRec, N, {
+        get: () => {
+            return M['[[EnvironmentRecord]]'][N2];
+        },
+        set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
+        configurable: false,
+        enumerable: true,
+    });
+    envRec['[[$InitializeBinding]]'].push(N);
+    // 6. Return NormalCompletion(empty).
     return;
 }
 
@@ -379,7 +426,7 @@ export function ParseModule (sourceText, hostDefined) {
         }
     }
     // 12. Let realm be the running execution context's Realm.
-    let realm = Object.create(null);
+    let realm = EnvECMAScriptCurrentRealm();
     // 13. Return Source Text Module Record {[[Realm]]: realm, [[Environment]]: undefined, [[HostDefined]]: hostDefined, [[Namespace]]: undefined, [[Evaluated]]: false, [[ECMAScriptCode]]: body, [[RequestedModules]]: requestedModules, [[ImportEntries]]: importEntries, [[LocalExportEntries]]: localExportEntries, [[StarExportEntries]]: starExportEntries, [[IndirectExportEntries]]: indirectExportEntries}.
     return {
         '[[Realm]]': realm,
@@ -441,7 +488,6 @@ export function ResolveExport(exportName, resolveSet, exportStarSet) {
             // TODO:
             // ii. Let importedModule be ? HostResolveImportedModule(module, e.[[ModuleRequest]]).
             let importedModule = HostResolveImportedModule(module, e['[[ModuleRequest]]']);
-debugger;
             // iii. Let indirectResolution be ? importedModule.ResolveExport(e.[[ImportName]], resolveSet, exportStarSet).
             let indirectResolution = importedModule.ResolveExport(e['[[ImportName]]'], resolveSet, exportStarSet);
             // iv. If indirectResolution is not null, return indirectResolution.
@@ -507,25 +553,20 @@ export function ModuleEvaluation() {
         requiredModule.ModuleEvaluation();
     }
     // 7. Let moduleCxt be a new ECMAScript code execution context.
-    let moduleCxt = Object.create({});
     // 8. Set the Function of moduleCxt to null.
-    moduleCxt.Function = null;
     // 9. Set the Realm of moduleCxt to module.[[Realm]].
-    moduleCxt.Realm = module['[[Realm]]'];
     // 10. Set the ScriptOrModule of moduleCxt to module.
-    moduleCxt.ScriptOrModule = module;
     // 11. Assert: module has been linked and declarations in its module environment have been instantiated.
     // 12. Set the VariableEnvironment of moduleCxt to module.[[Environment]].
-    moduleCxt.VariableEnvironment = module['[[Environment]]'];
     // 13. Set the LexicalEnvironment of moduleCxt to module.[[Environment]].
-    moduleCxt.LexicalEnvironment = module['[[Environment]]'];
     // 14. Suspend the currently running execution context.
     // 15. Push moduleCxt on to the execution context stack; moduleCxt is now the running execution context.
     // 16. Let result be the result of evaluating module.[[ECMAScriptCode]].
-    EnvECMAScriptEvaluationHook(moduleCxt, module['[[ECMAScriptCode]]']);
     // 17. Suspend moduleCxt and remove it from the execution context stack.
     // 18. Resume the context that is now on the top of the execution context stack as the running execution context.
     // 19. Return Completion(result).
+    // TODO: diverging (step 7-19) from the spec to emitate this in javascript
+    EnvECMAScriptEvaluationHook(module['[[Environment]]'], `"use strict";\n` + module['[[ECMAScriptCode]]'].ModuleCode);
     return;
 }
 
@@ -555,7 +596,6 @@ export function ModuleDeclarationInstantiation() {
     }
     // 9. For each ExportEntry Record e in module.[[IndirectExportEntries]], do
     for (let e of module['[[IndirectExportEntries]]']) {
-        debugger;
         // a. Let resolution be ? module.ResolveExport(e.[[ExportName]], « », « »).
         let resolution = module.ResolveExport(e['[[ExportName]]'], [], []);
         // b. If resolution is null or resolution is "ambiguous", throw a SyntaxError exception.
@@ -595,7 +635,7 @@ export function ModuleDeclarationInstantiation() {
     // 15. For each element d in varDeclarations do
     for (let d of varDeclarations) {
         // a. For each element dn of the BoundNames of d
-        for (dn of d.BoundNames) {
+        for (let dn of d.BoundNames) {
             // i. If dn is not an element of declaredVarNames, then
             if (declaredVarNames.indexOf(dn) === -1) {
                 // 1. Let status be envRec.CreateMutableBinding(dn, false).
@@ -618,7 +658,7 @@ export function ModuleDeclarationInstantiation() {
             // i. If IsConstantDeclaration of d is true, then
             if (d.IsConstantDeclaration === true) {
                 // 1. Let status be envRec.CreateImmutableBinding(dn, true).
-                CreateImmutableBinding.call(envRec, dn, true);
+                // TODO: CreateImmutableBinding.call(envRec, dn, true);
             }
             // ii. Else,
             else {
@@ -628,11 +668,16 @@ export function ModuleDeclarationInstantiation() {
             // iii. Assert: status is not an abrupt completion.
             // TODO: diverging to ignore
             // iv. If d is a GeneratorDeclaration production or a FunctionDeclaration production, then
-            if (d.InstantiateFunctionObject || d.FunctionDeclaration) {
+            if (d.GeneratorDeclaration || d.FunctionDeclaration) {
                 // 1. Let fo be the result of performing InstantiateFunctionObject for d with argument env.
-                let fo = InstantiateFunctionObject(d, env);
                 // 2. Call envRec.InitializeBinding(dn, fo).
-                InitializeBinding.call(envRec, dn, fo);
+                // TODO: diverging from spec (step 1 - 2) to evaluate the function declaration in the right context
+                let code = `${dn} = ${d.FunctionDeclaration};\n`;
+                if (d.FunctionName && dn !== d.FunctionName) {
+                    code += `${d.FunctionName} = ${dn};\n`;
+                }
+                EnvECMAScriptEvaluationHook(env, code);
+                envRec['[[$InitializeBinding]]'].push(dn); // tracking the initialization
             }
         }
     }

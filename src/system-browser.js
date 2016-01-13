@@ -33,8 +33,7 @@ if (typeof document !== 'undefined' && document.getElementsByTagName) {
     function ready() {
         var scripts = document.getElementsByTagName('script');
         var anonCnt = 0;
-        for (var i = 0; i < scripts.length; i++) {
-            var script = scripts[i];
+        for (let script of scripts) {
             if (script.type === 'module') {
                 var url = script.src;
 

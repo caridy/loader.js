@@ -27,7 +27,17 @@ import {
 }
 from "babel-core";
 
+import {
+    Script,
+    createContext,
+} from "vm";
+
 global.EnvSourceTextParserHook = (source) => {
+    let VarScopedDeclarations = [];
+    let LexicallyScopedDeclarations = [];
+    let ModuleRequests = [];
+    let ImportEntries = [];
+    let ExportEntries = [];
     let ast = transform(source, {
         plugins: [function() {
             return {
@@ -36,7 +46,7 @@ global.EnvSourceTextParserHook = (source) => {
                         path.remove();
                     },
                     ExportNamedDeclaration(path) {
-                        if (path.node.declaration) {
+                        if (path.node.declaration && path.node.declaration.type !== 'FunctionDeclaration') {
                             path.replaceWith(path.node.declaration);
                         } else {
                             path.remove();
@@ -45,8 +55,54 @@ global.EnvSourceTextParserHook = (source) => {
                     ExportAllDeclaration(path) {
                         path.remove();
                     },
-                    ExportDefaultDeclaration() {
-                        throw new Error('TODO');
+                    ExportDefaultDeclaration(path) {
+                        let declaration = path.node.declaration;
+                        if (declaration && declaration.type === 'FunctionDeclaration' && !declaration.id) {
+                            path.remove();
+                            LexicallyScopedDeclarations.push({
+                                BoundNames: ['$default$'],
+                                IsConstantDeclaration: true,
+                                FunctionDeclaration: source.slice(declaration.start, declaration.end),
+                                FunctionName: undefined,
+                            });
+                            // TODO: this solves the issue that export default function () {} doesn't appear in metadata.modules.exports
+                            ExportEntries.push({
+                                '[[ModuleRequest]]': null,
+                                '[[LocalName]]': '$default$',
+                                '[[ExportName]]': 'default',
+                                '[[ImportName]]': undefined,
+                            });
+                        } else {
+                            path.replaceWith(path.node.declaration);
+                        }
+                    },
+                    Program(path) {
+                        const all = path.scope.getAllBindings();
+                        for (let name in all) {
+                            const d = all[name];
+                            const parent = d.path.parent;
+                            if (d.kind === 'hoisted' && (parent.type === 'ExportNamedDeclaration' || parent.type === 'ExportDefaultDeclaration')) {
+                                let fn = parent.declaration;
+                                LexicallyScopedDeclarations.push({
+                                    BoundNames: [name],
+                                    IsConstantDeclaration: !!d.constant,
+                                    FunctionDeclaration: source.slice(fn.start, fn.end),
+                                    FunctionName: fn.id.name,
+                                });
+                            }
+                        }
+                        const vars = path.scope.getAllBindingsOfKind("var");
+                        const lets = path.scope.getAllBindingsOfKind("let");
+                        if (vars.length > 0) {
+                            VarScopedDeclarations.push({
+                                BoundNames: vars,
+                            });
+                        }
+                        if (lets.length > 0) {
+                            VarScopedDeclarations.push({
+                                BoundNames: lets,
+                            });
+                        }
                     }
                 }
             };
@@ -58,9 +114,6 @@ global.EnvSourceTextParserHook = (source) => {
             specifiers: exports
         },
     } = ast.metadata.modules;
-    let ModuleRequests = [];
-    let ImportEntries = [];
-    let ExportEntries = [];
     let ModuleCode = ast.code;
     imports.forEach((i) => {
         if (i.source && ModuleRequests.indexOf(i.source) === -1) {
@@ -94,8 +147,6 @@ global.EnvSourceTextParserHook = (source) => {
             });
         }
     });
-    let VarScopedDeclarations = [];
-    let LexicallyScopedDeclarations = [];
     return {
         ModuleCode,
         ModuleRequests,
@@ -106,6 +157,16 @@ global.EnvSourceTextParserHook = (source) => {
     };
 };
 
-global.EnvECMAScriptEvaluationHook = (cxt, code) => {
+global.EnvECMAScriptEvaluationHook = (env, code) => {
+    const script = new Script(code);
+    if (!env.nodeExecutionContext) {
+        env.nodeExecutionContext = new createContext(env['[[EnvironmentRecord]]']);
+    }
+    script.runInContext(env.nodeExecutionContext);
+};
 
+global.EnvECMAScriptCurrentRealm = () => {
+    return {
+        '[[globalEnv]]': global
+    };
 };

@@ -40,10 +40,6 @@ function createReflectiveModuleRecordFromEntry(entry) {
     }, () => {});
 }
 
-function createSourceTextModuleRecordFromEntry(entry, source) {
-    return ParseModule(source);
-}
-
 export default class Loader extends ReflectLoader {
 
     constructor() {

@@ -32,7 +32,7 @@ export function EnsureRegistered(loader, key) {
 
     // 4. Let pair be the entry in registry.[[RegistryMap]] such that pair.[[key]] is equal to key.
     let pair;
-    for (var [k, v] of registry['[[RegistryMap]]']) {
+    for (let [k, v] of registry['[[RegistryMap]]']) {
         if (k === key) pair = {'[[key]]': k, '[[value]]': v};
     }
 

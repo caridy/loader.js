@@ -81,7 +81,7 @@ Registry.prototype = {
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
         let entries = M.entries();
         // 6. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
-        for (var [k, v] of entries) {
+        for (let [k, v] of entries) {
             // a. If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, return p.[[value]].
             if (k && (k === key)) return v;
         }
@@ -105,7 +105,7 @@ Registry.prototype = {
         // 7. Let entries be the List that is the value of M’s [[MapData]] internal slot.
         let entries = M.entries();
         // 8. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
-        for (var [k] of entries) {
+        for (let [k] of entries) {
             // a. If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, then
             if (k && (k === key)) {
                 // i. Set p.[[value]] to entry.
@@ -134,7 +134,7 @@ Registry.prototype = {
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
         let entries = M.entries();
         // 6. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
-        for (var [k] of entries) {
+        for (let [k] of entries) {
             // If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, then, return true.
             if (k && (k === key)) return true;
         }
@@ -154,7 +154,7 @@ Registry.prototype = {
         // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
         let entries = M.entries();
         // 6. Repeat for each Record {[[key]], [[value]]} p that is an element of entries,
-        for (var [k] of entries) {
+        for (let [k] of entries) {
             // a. If p.[[key]] is not empty and SameValueZero(p.[[key]], key) is true, then
             if (k && (k === key)) {
                 // i. Set p.[[key]] to empty.

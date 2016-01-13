@@ -56,7 +56,7 @@ export function GetStage(entry, stage) {
     // 3. Let stages be entry.[[Pipeline]].
     let stages = entry['[[Pipeline]]'];
     // 4. For each element entry of stages, do
-    for (var stageEntry of stages) {
+    for (let stageEntry of stages) {
         // a. If stageEntry.[[Stage]] is equal to stage, return stageEntry.
         if (stageEntry['[[Stage]]'] === stage) return stageEntry;
     }
@@ -221,7 +221,7 @@ ModuleStatus.prototype = {
         // 5. Let n be 0.
         let n = 0;
         // 6. For each pair in entry.[[Dependencies]], do:
-        for (var pair of entry['[[Dependencies]]']) {
+        for (let pair of entry['[[Dependencies]]']) {
             // a. Let O be ObjectCreate(%ObjectPrototype%).
             let O = ObjectCreate(Object.prototype);
             // b. Let requestNameDesc be the PropertyDescriptor{[[Value]]: pair.[[RequestName]], [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false}.
