@@ -8,19 +8,9 @@ import ModuleStatus from "./5.module-status.js";
 if (!Reflect.Loader) Reflect.Loader = Loader;
 if (!Reflect.Module) Reflect.Module = Module;
 if (!Reflect.Module.ModuleStatus) Reflect.Module.ModuleStatus = ModuleStatus;
-let loaderPolyfill = new NodeLoader();
-
-if (!System.loader) System.loader = loaderPolyfill;
-
-export default loaderPolyfill;
-
-// the default loader in node should tap into node's require hooks to inject any
-// node module into the loader registry.
-
 
 /*
-From this point on, we take the liberty to do implementation specific routines
-to accomodate the loader.
+Implementation specific routines to accomodate the loader.
 */
 import {
     transform
@@ -170,3 +160,14 @@ global.EnvECMAScriptCurrentRealm = () => {
         '[[globalEnv]]': global
     };
 };
+
+// --- finishing
+// Creating the new loader instance
+let loaderPolyfill = new NodeLoader();
+
+if (!System.loader) System.loader = loaderPolyfill;
+
+export default loaderPolyfill;
+
+// the default loader in node should tap into node's require hooks to inject any
+// node module into the loader registry.

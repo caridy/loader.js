@@ -360,8 +360,8 @@ export function ImportedLocalNames(importEntries) {
     return localNames;
 }
 
-// 15.2.1.16.1 ParseModule (sourceText, hostDefined)
-export function ParseModule (sourceText, hostDefined) {
+// 15.2.1.16.1 ParseModule (sourceText, realm, hostDefined)
+export function ParseModule (sourceText, realm, hostDefined) {
     // 1. Assert: sourceText is an ECMAScript source text (see clause 10).
     assert(typeof(sourceText) === 'string', 'sourceText is an ECMAScript source text (see clause 10).');
     // 2. Parse sourceText using Module as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let body be the resulting parse tree. Otherwise, let body be a List of one or more SyntaxError or ReferenceError objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation dependent, but at least one must be present.
@@ -425,9 +425,7 @@ export function ParseModule (sourceText, hostDefined) {
             indirectExportEntries.push(ee);
         }
     }
-    // 12. Let realm be the running execution context's Realm.
-    let realm = EnvECMAScriptCurrentRealm();
-    // 13. Return Source Text Module Record {[[Realm]]: realm, [[Environment]]: undefined, [[HostDefined]]: hostDefined, [[Namespace]]: undefined, [[Evaluated]]: false, [[ECMAScriptCode]]: body, [[RequestedModules]]: requestedModules, [[ImportEntries]]: importEntries, [[LocalExportEntries]]: localExportEntries, [[StarExportEntries]]: starExportEntries, [[IndirectExportEntries]]: indirectExportEntries}.
+    // 12. Return Source Text Module Record {[[Realm]]: realm, [[Environment]]: undefined, [[HostDefined]]: hostDefined, [[Namespace]]: undefined, [[Evaluated]]: false, [[ECMAScriptCode]]: body, [[RequestedModules]]: requestedModules, [[ImportEntries]]: importEntries, [[LocalExportEntries]]: localExportEntries, [[StarExportEntries]]: starExportEntries, [[IndirectExportEntries]]: indirectExportEntries}.
     return {
         '[[Realm]]': realm,
         '[[Environment]]': undefined,
@@ -574,6 +572,7 @@ export function ModuleEvaluation() {
 export function ModuleDeclarationInstantiation() {
     // 1. Let module be this Source Text Module Record.
     let module = this;
+    console.log(module);
     // 2. Let realm be module.[[Realm]].
     let realm = module['[[Realm]]'];
     // 3. Assert: realm is not undefined.

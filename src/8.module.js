@@ -134,29 +134,18 @@ export function CreateModuleMutator(module) {
     let env = module['[[Environment]]'];
     // 4. Let envRec be env’s environment record.
     let envRec = env['[[EnvironmentRecord]]'];
-    // 5. For each name in _module_.[[IndirectExports]], do:
-    for (let name of module['[[IndirectExports]]']) {
-        // a. Let g be MakeArgGetter(name, envRec).
-        let g = MakeArgGetter(name, envRec);
-        // b. Let indirectExportDesc be the PropertyDescriptor{[[Get]]: g, [[Set]]: %ThrowTypeError%, [[Enumerable]]: true, [[Configurable]]: false}.
-        let indirectExportDesc = {get: g, set: () => { throw new TypeError(); }, enumerable: true, configurable: false};
-        // c. Perform ? DefinePropertyOrThrow(mutator, name, indirectExportDesc).
-        Object.defineProperty(mutator, name, indirectExportDesc);
-    }
-    // 6. For each name in _module_.[[LocalExports]], do:
+    // 5. For each name in _module_.[[LocalExports]], do:
     for (let name of module['[[LocalExports]]']) {
         // a. Assert: mutator does not already have a binding for name.
         assert(Object.getOwnPropertyDescriptor(mutator, name) === undefined, 'mutator does not already have a binding for name.');
-        // b. Let g be MakeArgGetter(name, envRec).
-        let g = MakeArgGetter(name, envRec);
-        // c. Let p be MakeArgSetter(name, envRec).
+        // b. Let p be MakeArgSetter(name, envRec).
         let p = MakeArgSetter(name, envRec);
-        // d. Let localExportDesc be the PropertyDescriptor{[[Get]]: g, [[Set]]: p, [[Enumerable]]: true, [[Configurable]]: false}.
-        let localExportDesc = {get: g, set: p, enumerable: true, configurable: false};
-        // e. Perform ? DefinePropertyOrThrow(mutator, name, localExportDesc).
+        // c. Let localExportDesc be the PropertyDescriptor{[[Get]]: g, [[Set]]: p, [[Enumerable]]: true, [[Configurable]]: false}.
+        let localExportDesc = {get: () => { throw new TypeError(); }, set: p, enumerable: true, configurable: false};
+        // d. Perform ? DefinePropertyOrThrow(mutator, name, localExportDesc).
         Object.defineProperty(mutator, name, localExportDesc);
     }
-    // 7. Return mutator.
+    // 6. Return mutator.
     return mutator;
 }
 
@@ -232,13 +221,15 @@ export function ModuleEvaluation() {
     let func = module['[[Evaluate]]'];
     // 4. Set module.[[Evaluated]] to true.
     module['[[Evaluated]]'] = true;
-    // 5. Assert: func is callable.
-    assert(IsCallable(func) === true, 'func is callable.');
+    // 5. Set module.[[Evaluate]] to undefined.
+    module['[[Evaluate]]'] = undefined;
     // 6. For each requiredModule in module.[[RequestedModules]], do:
-    for (let requiredModule of module['[[RequestedModules]]']) {
-        // a. Assert: requiredModule is a Module Record.
+    for (let pair of module['[[IndirectExports]]']) {
+        // a. Let requiredModule be pair.[[Value]].[[module]].
+        let requiredModule = pair['[[Value]]']['[[module]]'];
+        // b. Assert: requiredModule is a Module Record.
         assert('[[Namespace]]' in requiredModule, 'requiredModule is a Module Record.');
-        // b. Perform ? requiredModule.ModuleEvaluation().
+        // c. Perform ? requiredModule.ModuleEvaluation().
         requiredModule.ModuleEvaluation();
     }
     // 7. If IsCallable(func) is true, then:
@@ -255,7 +246,7 @@ export function ModuleEvaluation() {
 // 8.3. The Module Constructor
 // 8.3.1. Module(descriptors[, executor[, evaluate]])
 export default function Module(descriptors, executor, evaluate) {
-    // 1. Let realm be the current Realm.
+    // 1. Let realm be the current Realm Record.
     let realm = EnvECMAScriptCurrentRealm();
     // 2. Let env be NewModuleEnvironment(realm.[[globalEnv]]).
     let env = NewModuleEnvironment(realm['[[globalEnv]]']);
@@ -269,14 +260,12 @@ export default function Module(descriptors, executor, evaluate) {
     let indirectExports = [];
     // 7. Let exportNames be a new empty List.
     let exportNames = [];
-    // 8. Let requestedModules be new empty List.
-    let requestedModules = [];
-    // 9. Let envRec be env’s environment record.
+    // 8. Let envRec be env’s environment record.
     let envRec = env['[[EnvironmentRecord]]'];
     // IMPLEMENTATION: diverging from spec to track initialized and mutable bindings
     envRec['[[$InitializeBinding]]'] = [];
     envRec['[[$MutableBinding]]'] = [];
-    // 10. For each desc in exportDescriptors, do:
+    // 9. For each desc in exportDescriptors, do:
     for (let desc of exportDescriptors) {
         // a. Let exportName be desc.[[Name]].
         let exportName = desc['[[Name]]'];
@@ -286,18 +275,13 @@ export default function Module(descriptors, executor, evaluate) {
         if (desc['[[IndirectExportDescriptor]]']) {
             // i. Let otherMod be desc.[[Module]].
             let otherMod = desc['[[Module]]'];
-            // ii. If requestedModules does not contain the value of otherMod, then:
-            if (requestedModules.indexOf(otherMod) === -1) {
-                // 1. Append otherMod to requestedModules.
-                requestedModules.push(otherMod);
-            }
-            // iii. Let resolution be ? otherMod.ResolveExport(desc.[[Import]], « »).
+            // ii. Let resolution be ? otherMod.ResolveExport(desc.[[Import]], « »).
             let resolution = otherMod.ResolveExport(desc['[[Import]]'], []);
-            // iv. If resolution is null, then throw a SyntaxError exception.
+            // iii. If resolution is null, then throw a SyntaxError exception.
             if (resolution === null) {
                 throw new SyntaxError();
             }
-            // v. Append the record {[[Key]]: exportName, [[Value]]: resolution} to indirectExports.
+            // iv. Append the record {[[Key]]: exportName, [[Value]]: resolution} to indirectExports.
             indirectExports.push({
                 '[[Key]]': exportName,
                 '[[Value]]': resolution
@@ -330,14 +314,13 @@ export default function Module(descriptors, executor, evaluate) {
         // a. If IsCallable(evaluate) is false, throw a new TypeError exception.
         if (IsCallable(evaluate) === false) throw new TypeError();
     }
-    // 12. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[RequestedModules]]: _requestedModules_, [[Evaluated]]: *false*, [[Evaluate]]: evaluate}.
+    // 12. Let mod be a new Reflective Module Record {[[Realm]]: realm, [[Environment]]: env, [[Namespace]]: undefined, [[LocalExports]]: localExports, [[IndirectExports]]: indirectExports, [[Evaluated]]: *false*, [[Evaluate]]: evaluate}.
     let mod = {
         '[[Realm]]': realm,
         '[[Environment]]': env,
         '[[Namespace]]': undefined,
         '[[LocalExports]]': localExports,
         '[[IndirectExports]]': indirectExports,
-        '[[RequestedModules]]': requestedModules,
         '[[Evaluated]]': false,
         '[[Evaluate]]': evaluate,
         // wiring up concrete implementations
@@ -379,8 +362,8 @@ Module.evaluate = function (ns) {
     let status = EnsureEvaluated(entry);
     // 5. RejectIfAbrupt(status);
     // TODO: diverging by ignoring the RejectIfAbrupt.
-    // 6. Return a promise resolved with true.
-    return Promise.resolve(true);
+    // 6. Return a promise resolved with undefined.
+    return Promise.resolve(undefined);
 };
 
 export function GetExportedNames() {

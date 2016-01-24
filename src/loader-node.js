@@ -22,12 +22,12 @@ function createReflectiveModuleRecordFromEntry(entry) {
         }
         exportDescriptors[name] = desc;
     }
-    return new Reflect.Module(exportDescriptors, (mutator) => {
+    return new Reflect.Module(exportDescriptors, (mutator, ns) => {
         for (let name in exportDescriptors) {
             if (!exportDescriptors[name].const) {
-                mutator[name] = exports[name];
+                mutator[name] = exports[name]; // updating to the latest
                 Object.defineProperty(exports, name, {
-                    get: () => mutator[name],
+                    get: () => ns[name],
                     set: (value) => mutator[name] = value,
                     configurable: false
                 });

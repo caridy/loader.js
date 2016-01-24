@@ -6,13 +6,7 @@ import {
 
 import {
     GetCurrentStage,
-    UpgradeToStage,
 } from './5.module-status.js';
-
-import {
-    ModuleEvaluation,
-    ModuleDeclarationInstantiation,
-} from './8.module.js';
 
 import {
     GetModuleNamespace,
@@ -52,55 +46,7 @@ export function HostResolveImportedModule(module, requestName) {
 
 // 7.2. Linking
 
-// 7.2.1. Link(root)
-export function Link(root) {
-    // 1. Assert: root must have all of the internal slots of a ModuleStatus Instance (5.5).
-    assert('[[Pipeline]]' in root, 'root must have all of the internal slots of a ModuleStatus Instance (5.5).');
-    // 2. Let deps be DependencyGraph(root).
-    let deps = DependencyGraph(root);
-    // 3. For each dep in deps, do:
-    for (let dep of deps) {
-        // a. Let depStageEntry be GetCurrentStage(dep).
-        let depStageEntry = GetCurrentStage(dep);
-        // b. If dep.[[Module]] is a Function object, then:
-        if (typeof dep['[[Module]]'] === 'function') {
-            // i. Assert: depStageEntry.[[Stage]] is "link".
-            assert(depStageEntry['[[Stage]]'] === 'link', 'depStageEntry.[[Stage]] is "link".');
-            // ii. Let func be dep.[[Module]].
-            let func = dep['[[Module]]'];
-            // iii. Let argList be a new empty List.
-            let argList = [];
-            // iv. Let ns be ? Call(func, undefined, argList).
-            let ns = func.call(undefined, ...argList);
-            // v. If ns is not a module namespace exotic object, throw a TypeError exception.
-            if (!('[[Module]]' in ns)) throw new TypeError();
-            // vi. Set dep.[[Module]] to ns.[[Module]].
-            dep['[[Module]]'] = ns['[[Module]]'];
-        }
-    }
-    // 4. Assert: the following sequence is guaranteed not to run any user code.
-    HowToDoThis('7.2.1. Link(root)', '// 4. Assert: the following sequence is guaranteed not to run any user code.');
-    // 5. For each dep in deps, do:
-    for (let dep of deps) {
-        // a. Let depStageEntry be GetCurrentStage(dep).
-        let depStageEntry = GetCurrentStage(dep);
-        // b. If depStageEntry.[[Stage]] is "link", then:
-        if (depStageEntry['[[Stage]]'] === 'link') {
-            // i. Let module be dep.[[Module]].
-            let module = dep['[[Module]]'];
-            // ii. Assert: module is a Module Record.
-            assert('[[Namespace]]' in module, 'module is a Module Record');
-            // iii. Perform ? module.ModuleDeclarationInstantiation().
-            module.ModuleDeclarationInstantiation();
-            // iv. Perform UpgradeToStage(dep, "ready").
-            UpgradeToStage(dep, 'ready');
-        }
-    }
-    // 6. Return undefined.
-    return undefined;
-}
-
-// 7.2.2. DependencyGraph(root)
+// 7.2.1. DependencyGraph(root)
 export function DependencyGraph(root) {
     // 1. Assert: root must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in root, 'root must have all of the internal slots of a ModuleStatus Instance (5.5).');
@@ -112,7 +58,7 @@ export function DependencyGraph(root) {
     return result;
 }
 
-// 7.2.3. ComputeDependencyGraph(entry, result)
+// 7.2.2. ComputeDependencyGraph(entry, result)
 export function ComputeDependencyGraph(entry, result) {
     // 1. Assert: entry must have all of the internal slots of a ModuleStatus Instance (5.5).
     assert('[[Pipeline]]' in entry, 'entry must have all of the internal slots of a ModuleStatus Instance (5.5).');

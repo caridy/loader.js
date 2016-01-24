@@ -31,9 +31,11 @@ export default function Loader() {
     HowToDoThis('LoaderConstructor', '1. If NewTarget is undefined, then throw a TypeError exception.');
     // 2. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%LoaderPrototype%", «[[Realm]], [[Registry]]»).
     let O = OrdinaryCreateFromConstructor(Loader, "%LoaderPrototype%", ['[[Realm]]', '[[Registry]]']);
-    // 3. Set O’s [[Registry]] internal slot to CreateRegistry().
+    // 3. Set O’s [[Realm]] internal slot to the current Realm Registry.
+    O['[[Realm]]'] = global.EnvECMAScriptCurrentRealm();
+    // 4. Set O’s [[Registry]] internal slot to CreateRegistry().
     O['[[Registry]]'] = CreateRegistry();
-    // 4. Return O.
+    // 5. Return O.
     return O;
 }
 

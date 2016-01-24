@@ -8,8 +8,7 @@ import {
     RequestFetch,
     RequestTranslate,
     RequestInstantiate,
-    RequestSatisfy,
-    ExtractDependencies,
+    SatisfyInstance,
 } from './6.loading.js';
 
 import {
@@ -20,6 +19,8 @@ import {
 import {
     HowToDoThis,
     transformPromise,
+    resolvePromise,
+    rejectPromise,
     assert,
 } from "./utils.js";
 
@@ -71,7 +72,7 @@ export function LoadModule(entry, stage) {
     // 2. Assert: Type(stage) is String.
     assert(typeof stage === 'string', 'Type(stage) is String.');
     // 3. Assert: stage is a valid stage value.
-    assert(['fetch', 'translate', 'instantiate', 'satisfy', 'link', 'ready'].indexOf(stage) !== -1, 'stage is a valid stage value.');
+    assert(['fetch', 'translate', 'instantiate'].indexOf(stage) !== -1, 'stage is a valid stage value.');
     // 4. If stage is "fetch", then:
     if (stage === "fetch") {
         // a. Return the result of transforming RequestFetch(entry) with a new pass-through promise.
@@ -343,7 +344,7 @@ ModuleStatus.prototype = {
                     // 3. Assert: stageEntry is not undefined.
                     assert(stageEntry !== undefined, 'stageEntry is not undefined.');
                     // 4. Fulfill stageEntry.[[Result]] with value.
-                    HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
+                    resolvePromise(stageEntry['[[Result]]'], value);
                 });
             }
             // b. Else,
@@ -353,7 +354,7 @@ ModuleStatus.prototype = {
                 // ii. If stageEntry is undefined, throw a new TypeError.
                 if (stageEntry === undefined) throw new TypeError();
                 // iii. Fulfill stageEntry.[[Result]] with value.
-                HowToDoThis('ModuleStatus.prototype.resolve', 'Fulfill stageEntry.[[Result]] with value.');
+                resolvePromise(stageEntry['[[Result]]'], value);
             }
         });
         // 12. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
@@ -397,7 +398,7 @@ ModuleStatus.prototype = {
             // b. If stageEntry is undefined, throw a new TypeError.
             if (stageEntry === undefined) throw new TypeError('missed the train');
             // c. Reject stageEntry.[[Result]] with value.
-            HowToDoThis('ModuleStatus.prototype.reject', '11.c Reject stageEntry.[[Result]] with value.');
+            rejectPromise(stageEntry['[[Result]]'], value);
         });
         // 12. Let pCatch be the result of transforming p1 with a rejection handler that, when called, runs the following steps:
         transformPromise(p1).catch(() => {
