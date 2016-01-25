@@ -572,7 +572,6 @@ export function ModuleEvaluation() {
 export function ModuleDeclarationInstantiation() {
     // 1. Let module be this Source Text Module Record.
     let module = this;
-    console.log(module);
     // 2. Let realm be module.[[Realm]].
     let realm = module['[[Realm]]'];
     // 3. Assert: realm is not undefined.

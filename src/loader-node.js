@@ -1,3 +1,6 @@
+const MainModule = process.mainModule;
+const ES6_MODULE_DETECTION_REGEXP = /\.jsm$/;
+
 import ReflectLoader from "./3.loader.js";
 import {
     Module as nodeModule,
@@ -6,8 +9,6 @@ import {
 import {
     readFileSync,
 } from "fs";
-
-const MainModule = process.mainModule;
 
 function createReflectiveModuleRecordFromEntry(entry) {
     let exports = require(entry['[[Key]]']);
@@ -33,7 +34,7 @@ function createReflectiveModuleRecordFromEntry(entry) {
                 });
             }
         }
-    }, () => {});
+    });
 }
 
 export default class Loader extends ReflectLoader {
@@ -55,9 +56,9 @@ export default class Loader extends ReflectLoader {
 
         // fetch hook
         this[ReflectLoader.fetch] = (entry, key) => {
-            // only reading file from disk if the module is identified as es6 module
+            // only reading module from disk if it is identified as es6 module
             // TODO: improve detection, for now just using a filename token match
-            return  (key.indexOf('es6') !== -1 ? readFileSync(key, 'utf8') : undefined);
+            return  (ES6_MODULE_DETECTION_REGEXP.test(key) === true ? readFileSync(key, 'utf8') : undefined);
         };
 
         // translate hook

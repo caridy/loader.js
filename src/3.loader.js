@@ -32,7 +32,7 @@ export default function Loader() {
     // 2. Let O be ? OrdinaryCreateFromConstructor(NewTarget, "%LoaderPrototype%", «[[Realm]], [[Registry]]»).
     let O = OrdinaryCreateFromConstructor(Loader, "%LoaderPrototype%", ['[[Realm]]', '[[Registry]]']);
     // 3. Set O’s [[Realm]] internal slot to the current Realm Registry.
-    O['[[Realm]]'] = global.EnvECMAScriptCurrentRealm();
+    O['[[Realm]]'] = EnvECMAScriptCurrentRealm();
     // 4. Set O’s [[Registry]] internal slot to CreateRegistry().
     O['[[Registry]]'] = CreateRegistry();
     // 5. Return O.
