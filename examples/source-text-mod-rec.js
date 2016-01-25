@@ -1,6 +1,6 @@
 require('../lib/system-node.js'); // polyfill
 
-System.loader.import('./modules/es6-proxy-of-foo.js').then(function (foo) {
+System.loader.import('./modules/proxy-of-foo.jsm').then(function (foo) {
     console.log(foo);
     console.log('value of counter: ', foo.value);
 

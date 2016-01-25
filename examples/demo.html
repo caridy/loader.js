@@ -1,0 +1,10 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.4.4/babel.js"></script>
+<script src="../dist/loader.js"></script>
+<script>
+System.loader.import('./modules/bar.jsm').then(function (bar) {
+    console.log(bar);
+    console.log('value of default function call: ', bar.default());
+}).catch(function (err) {
+    console.error(err.stack || err);
+});
+</script>

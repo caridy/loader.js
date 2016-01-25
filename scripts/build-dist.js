@@ -1,11 +1,9 @@
 import * as p from 'path';
 import * as fs from 'fs';
-import rollup from 'rollup';
+import {rollup} from 'rollup';
 import babel from 'rollup-plugin-babel';
 import npm from 'rollup-plugin-npm';
 import commonjs from 'rollup-plugin-commonjs';
-import replace from 'rollup-plugin-replace';
-import uglify from 'uglify-js';
 
 const copyright = (
 `/*
@@ -16,86 +14,32 @@ const copyright = (
 `
 );
 
-function createBundle() {
-    let bundle = rollup.rollup({
-        entry: p.resolve('src/system-browser.js'),
-        plugins: [
-            babel({
-                babelrc: false,
-                presets: [
-                    'es2015-rollup',
-                ],
-                plugins: [
-                    'transform-object-rest-spread',
-                ],
-            }),
-            npm({
-                jsnext: true,
-                skip: [
-                    // 'reflect',
-                ],
-            }),
-            commonjs({
-                sourceMap: true,
-            }),
-            replace({
-                'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-            }),
-        ],
-    });
+const entry = p.resolve('src/system-browser.js');
+const dest  = p.resolve('dist/loader.js');
 
-    // Cast as native Promise.
-    return Promise.resolve(bundle);
-}
+const bundleConfig = {
+    dest,
+    format: 'umd',
+    moduleName: 'loaderPolyfill',
+    banner: copyright,
+    sourceMap: false,
+};
 
-function writeBundle(bundle, {minify = false}) {
-    const filename = `loader${minify ? '.min.js' : '.js'}`;
-    const dest = p.resolve(`dist/${filename}`);
+let babelConfig = JSON.parse(fs.readFileSync('.babelrc', 'utf8'));
+babelConfig.babelrc = false;
+babelConfig.presets = babelConfig.presets.map((preset) => {
+    return preset === 'es2015' ? 'es2015-rollup' : preset;
+});
 
-    let result = bundle.generate({
-        format: 'umd',
-        moduleName: 'loaderPolyfill',
-        banner: copyright,
-        sourceMap: true,
-        sourceMapFile: dest,
-    });
+let plugins = [
+    babel(babelConfig),
+    npm(),
+    commonjs({
+        sourceMap: false,
+    }),
+];
 
-    if (minify) {
-        result = uglify.minify(result.code, {
-            fromString: true,
-            inSourceMap: result.map,
-            outSourceMap: `${filename}.map`,
-            warnings: false,
-        });
-
-        result.map = JSON.parse(result.map);
-    } else {
-        result.code += `\n//# sourceMappingURL=${filename}.map`;
-    }
-
-    let {code, map} = result;
-
-    // Tweak source paths.
-    map.sources = map.sources.map((path) => p.relative('..', path));
-    map.sourceRoot = 'loader:///';
-
-    const throwIfError = (err) => {
-        if (err) {
-            throw err;
-        }
-    };
-
-    fs.writeFile(dest, code, throwIfError);
-    fs.writeFile(`${dest}.map`, JSON.stringify(map), throwIfError);
-
-    console.log(`Writing: ${p.relative('.', dest)}`);
-    console.log(`Writing: ${p.relative('.', `${dest}.map`)}`);
-}
-
-// -----------------------------------------------------------------------------
+let bundle = Promise.resolve(rollup({entry, plugins}));
+bundle.then(({write}) => write(bundleConfig));
 
 process.on('unhandledRejection', (reason) => {throw reason;});
-
-createBundle().then((bundle) => {
-    writeBundle(bundle, {minify: process.env.NODE_ENV === 'production'});
-});
