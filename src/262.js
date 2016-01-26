@@ -277,6 +277,7 @@ export function CreateImmutableBinding (N/*, S*/) {
     // 3. Create an immutable binding in envRec for N and record that it is uninitialized. If S is true record that the newly created binding is a strict binding.
     // TODO: diverging from spec since all bindings are strict bindings
     Object.defineProperty(envRec, N, {
+        writable: true,
         configurable: true,
         enumerable: true,
     });
@@ -293,6 +294,7 @@ export function InitializeBinding (N, V) {
     // 3. Set the bound value for N in envRec to V.
     Object.defineProperty(envRec, N, {
         value: V,
+        writable: false,
         // IMPLEMENTATION: only after the binding is initialized we lock it down if it is not mutable
         configurable: envRec['[[$MutableBinding]]'].indexOf(N) !== -1,
     });
@@ -315,7 +317,7 @@ export function CreateImportBinding (N, M, N2) {
     // 5. Create an immutable indirect binding in envRec for N that references M and N2 as its target binding and record that the binding is initialized.
     Object.defineProperty(envRec, N, {
         get: () => {
-            return M['[[EnvironmentRecord]]'][N2];
+            return M['[[Environment]]']['[[EnvironmentRecord]]'][N2];
         },
         set: () => { throw new SyntaxError('Live bindings in an exotic namespace object cannot be modified.'); },
         configurable: false,
@@ -656,7 +658,7 @@ export function ModuleDeclarationInstantiation() {
             // i. If IsConstantDeclaration of d is true, then
             if (d.IsConstantDeclaration === true) {
                 // 1. Let status be envRec.CreateImmutableBinding(dn, true).
-                // TODO: CreateImmutableBinding.call(envRec, dn, true);
+                CreateImmutableBinding.call(envRec, dn, true);
             }
             // ii. Else,
             else {

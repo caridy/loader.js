@@ -1,22 +1,23 @@
-const DEFAULT_REFERRER = window.location.href;
+const BASE_PATHNAME = window.location.pathname;
+const BASE_ORIGIN = window.location.origin;
 const ES6_MODULE_DETECTION_REGEXP = /\.jsm$/;
+const PROTOCOL_DETECTION_REGEXP = /^(https?:)?\/\//;
 
 import ReflectLoader from "./3.loader.js";
 
-/*
-  normalizeName() is inspired by Ember's loader:
-  https://github.com/emberjs/ember.js/blob/0591740685ee2c444f2cfdbcebad0bebd89d1303/packages/loader/lib/main.js#L39-L53
- */
 function normalizeName(child, parentBase) {
-    if (child.charAt(0) === '/') {
-        child = child.slice(1);
-    }
-    if (child.charAt(0) !== '.') {
+    if (PROTOCOL_DETECTION_REGEXP.test(child) === true) {
         return child;
     }
-    var parts = child.split('/');
+    if (child.charAt(0) === '/') {
+        child = parentBase.slice(0, 3).join('/') + child;
+    }
+    if (child.charAt(0) !== '.') {
+        return parentBase.concat(child).join('/');
+    }
+    let parts = child.split('/');
     while (parts[0] === '.' || parts[0] === '..') {
-        if (parts.shift() === '..') {
+        if (parts.shift() === '..' && parentBase.length > 3) {
             parentBase.pop();
         }
     }
@@ -29,8 +30,8 @@ export default class Loader extends ReflectLoader {
 
         // resolve hook
         this[ReflectLoader.resolve] = (name, referrer) => {
-            if (!referrer) {
-                referrer = DEFAULT_REFERRER;
+            if (!referrer || referrer === 'anonymous') {
+                referrer = BASE_ORIGIN + BASE_PATHNAME;
             }
             return normalizeName(name, referrer.split('/').slice(0, -1));
         };

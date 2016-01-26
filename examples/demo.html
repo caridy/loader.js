@@ -2,9 +2,13 @@
 <script src="../dist/loader.js"></script>
 <script>
 System.loader.import('./modules/bar.jsm').then(function (bar) {
-    console.log(bar);
-    console.log('value of default function call: ', bar.default());
+    console.log('value when importing using loader api: ', bar.default());
 }).catch(function (err) {
     console.error(err.stack || err);
 });
+</script>
+<script type="module" src="./modules/bar.jsm"></script>
+<script type="module">
+import b from "./modules/bar.jsm";
+console.log('value when importing from anonymous module: ' + b());
 </script>

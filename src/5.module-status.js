@@ -334,7 +334,7 @@ ModuleStatus.prototype = {
         // 11. Let p1 be the result of transforming p0 with a fulfillment handler that, when called with argument value, runs the following steps:
         let p1 = transformPromise(p0).then((value) => {
             // a. If stageValue is "instantiate", then:
-            if (stageValue) {
+            if (stageValue === 'instatiate') {
                 // i. Return the result of transforming SatisfyInstance(entry, value, undefined, undefined) with a fulfillment handler that, when called with value instance, runs the following steps:
                 return transformPromise(SatisfyInstance(entry, value, undefined, undefined)).then((instance) => {
                     // 1. Set entry.[[Module]] to instance.

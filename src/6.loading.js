@@ -29,26 +29,31 @@ export function EnsureRegistered(loader, key) {
     assert(typeof key === 'string', 'Type(key) is String.');
     // 3. Let registry be loader.[[Registry]].
     let registry = loader['[[Registry]]'];
-
-    // 4. Let pair be the entry in registry.[[RegistryMap]] such that pair.[[key]] is equal to key.
+    // 4. Let M be registry.[[RegistryMap]].
+    let M = registry['[[RegistryMap]]'];
+    // 5. Let entries be the List that is the value of M’s [[MapData]] internal slot.
+    let entries = M.entries();
+    // 6. Let pair be the entry in entries such that pair.[[key]] is equal to key.
     let pair;
-    for (let [k, v] of registry['[[RegistryMap]]']) {
+    for (let [k, v] of entries) {
         if (k === key) pair = {'[[key]]': k, '[[value]]': v};
     }
-
-    // 5. If pair exists, then:
+    // 7. If pair exists, then:
     let entry;
     if (pair) {
         // a. Let entry be pair.[[value]].
         entry = pair['[[value]]'];
     }
-    // 6. Else:
+    // 8. Else:
     else {
         // a. Let entry be a new ModuleStatus(loader, key).
         entry = new ModuleStatus(loader, key);
+        // b. Let p be the Record {[[key]]: key, [[value]]: entry}.
+        // TODO: ignoring since `M` is already a map with a `set()` method
+        // c. Append p as the last element of entries.
+        M.set(key, entry);
     }
-
-    // 7. Return entry.
+    // 9. Return entry.
     return entry;
 }
 

@@ -137,11 +137,13 @@ global.EnvSourceTextParserHook = (source) => {
 };
 
 global.EnvECMAScriptEvaluationHook = (env, code) => {
-    const script = new Script(code);
-    if (!env.nodeExecutionContext) {
-        env.nodeExecutionContext = new createContext(env['[[EnvironmentRecord]]']);
-    }
-    script.runInContext(env.nodeExecutionContext);
+    let fn = new Function('context', `with(context){(function(){\n${code}\n})()}`);
+    fn(env['[[EnvironmentRecord]]']);
+    // const script = new Script(code);
+    // if (!env.nodeExecutionContext) {
+    //     env.nodeExecutionContext = new createContext(env['[[EnvironmentRecord]]']);
+    // }
+    // script.runInContext(env.nodeExecutionContext);
 };
 
 global.EnvECMAScriptCurrentRealm = () => {
